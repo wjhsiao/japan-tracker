@@ -3,20 +3,14 @@
 import { useEffect, useState } from 'react'
 import PageShell from '../components/layout/PageShell'
 import PieChart, { COLORS } from '../components/ui/PieChart'
-import { Expense } from '@/lib/types'
 import { CATEGORIES } from '@/lib/types'
-import { fetchExpenses } from '@/lib/gas'
+import { useExpenses } from '@/lib/useExpenses'
 import { loadSettings } from '@/lib/settings'
 import { formatJPY, formatTWD, sumJPY, groupByDate } from '@/lib/utils'
 
 export default function StatsPage() {
-  const [expenses, setExpenses] = useState<Expense[]>([])
-  const [loading, setLoading] = useState(true)
+  const { expenses, loading, error, refresh } = useExpenses()
   const settings = loadSettings()
-
-  useEffect(() => {
-    fetchExpenses().then(setExpenses).catch(() => {}).finally(() => setLoading(false))
-  }, [])
 
   const total = sumJPY(expenses)
 
@@ -46,6 +40,15 @@ export default function StatsPage() {
     <PageShell title="消費統計">
       {loading ? (
         <div className="flex h-40 items-center justify-center text-sm text-gray-400">載入中...</div>
+      ) : error ? (
+        <div className="flex flex-col items-center py-20 text-center">
+          <p className="text-3xl">⚠️</p>
+          <p className="mt-3 text-sm text-gray-500">{error}</p>
+          <button onClick={refresh}
+            className="mt-3 rounded-xl bg-gray-100 px-4 py-2 text-sm font-medium text-gray-700 hover:bg-gray-200 transition">
+            重試
+          </button>
+        </div>
       ) : expenses.length === 0 ? (
         <div className="flex flex-col items-center py-20">
           <p className="text-4xl">📊</p>

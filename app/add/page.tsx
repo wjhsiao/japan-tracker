@@ -4,6 +4,7 @@ import { useRouter } from 'next/navigation'
 import PageShell from '../components/layout/PageShell'
 import ExpenseForm from '../components/expenses/ExpenseForm'
 import { addExpense } from '@/lib/gas'
+import { invalidateExpensesCache } from '@/lib/useExpenses'
 import { Expense } from '@/lib/types'
 
 export default function AddPage() {
@@ -11,6 +12,7 @@ export default function AddPage() {
 
   async function handleSave(expense: Expense) {
     await addExpense(expense)
+    invalidateExpensesCache()
     router.push('/')
   }
 

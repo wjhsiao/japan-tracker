@@ -6,6 +6,7 @@ import PageShell from '../components/layout/PageShell'
 import ExpenseForm from '../components/expenses/ExpenseForm'
 import { OcrResult } from '@/lib/types'
 import { addExpense } from '@/lib/gas'
+import { invalidateExpensesCache } from '@/lib/useExpenses'
 import { compressImage } from '@/lib/utils'
 import { loadSettings } from '@/lib/settings'
 import { Expense } from '@/lib/types'
@@ -55,6 +56,7 @@ export default function ScanPage() {
 
   async function handleSave(expense: Expense) {
     await addExpense(expense)
+    invalidateExpensesCache()
     router.push('/')
   }
 
