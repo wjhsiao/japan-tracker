@@ -2,7 +2,7 @@
 
 import PageShell from '../components/layout/PageShell'
 import PieChart, { COLORS } from '../components/ui/PieChart'
-import { CATEGORIES } from '@/lib/types'
+import { CATEGORIES, PAYMENT_METHODS } from '@/lib/types'
 import { useExpenses } from '@/lib/useExpenses'
 import { loadSettings } from '@/lib/settings'
 import { formatJPY, formatTWD, sumJPY, groupByDate } from '@/lib/utils'
@@ -34,6 +34,15 @@ export default function StatsPage() {
     name,
     total: sumJPY(expenses.filter(e => e.paidBy === name)),
   }))
+
+  // Bar fill color per payment method (solid, for the breakdown bars)
+  const PAY_BAR: Record<string, string> = {
+    現金: 'bg-green-500', 信用卡: 'bg-blue-500', PayPay: 'bg-red-500',
+    Suica: 'bg-cyan-500', 其他: 'bg-gray-400',
+  }
+  const paymentTotals = PAYMENT_METHODS
+    .map(m => ({ method: m, total: sumJPY(expenses.filter(e => e.paymentMethod === m)) }))
+    .filter(p => p.total > 0)
 
   return (
     <PageShell title="消費統計">
@@ -125,6 +134,31 @@ export default function StatsPage() {
                   <p className="mt-1 text-xs text-gray-400">
                     {formatTWD(pt, settings.exchangeRateJPYtoTWD)}
                     　{total > 0 ? ((pt / total) * 100).toFixed(0) : 0}%
+                  </p>
+                </div>
+              ))}
+            </div>
+          )}
+
+          {/* Per payment method */}
+          {paymentTotals.length > 0 && (
+            <div className="rounded-2xl bg-white p-5 shadow-sm ring-1 ring-gray-100">
+              <h2 className="mb-4 text-sm font-semibold text-gray-700">付款方式</h2>
+              {paymentTotals.map(({ method, total: mt }) => (
+                <div key={method} className="mb-4 last:mb-0">
+                  <div className="flex justify-between text-sm mb-1">
+                    <span className="font-medium text-gray-700">{method}</span>
+                    <span className="font-semibold text-gray-900">{formatJPY(mt)}</span>
+                  </div>
+                  <div className="h-2.5 w-full rounded-full bg-gray-100 overflow-hidden">
+                    <div
+                      className={`h-full rounded-full transition-all duration-500 ${PAY_BAR[method] ?? 'bg-gray-400'}`}
+                      style={{ width: total > 0 ? `${(mt / total) * 100}%` : '0%' }}
+                    />
+                  </div>
+                  <p className="mt-1 text-xs text-gray-400">
+                    {formatTWD(mt, settings.exchangeRateJPYtoTWD)}
+                    　{total > 0 ? ((mt / total) * 100).toFixed(0) : 0}%
                   </p>
                 </div>
               ))}
