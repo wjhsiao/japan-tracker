@@ -34,12 +34,21 @@ export default function PieChart({ slices }: { slices: Slice[] }) {
     return `M ${cx} ${cy} L ${x1} ${y1} A ${r} ${r} 0 ${large} 1 ${x2} ${y2} Z`
   }
 
+  // Slices that actually have value; if only one, an arc spanning 360° degenerates
+  // (start == end point) and renders nothing — draw a full circle instead.
+  const nonZero = slices.filter(sl => sl.value > 0)
+  const singleSlice = nonZero.length === 1
+
   return (
     <div className="flex items-center gap-4">
       <svg width={160} height={160} viewBox="0 0 160 160" className="shrink-0">
-        {slices.map((sl, i) => (
-          <path key={i} d={arc(sl.value)} fill={sl.color} stroke="white" strokeWidth={2} />
-        ))}
+        {singleSlice ? (
+          <circle cx={cx} cy={cy} r={r} fill={nonZero[0].color} />
+        ) : (
+          slices.map((sl, i) => (
+            <path key={i} d={arc(sl.value)} fill={sl.color} stroke="white" strokeWidth={2} />
+          ))
+        )}
         <circle cx={cx} cy={cy} r={38} fill="white" />
       </svg>
       <div className="flex-1 space-y-1.5 min-w-0">
