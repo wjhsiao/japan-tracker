@@ -42,6 +42,11 @@ function verifyToken(body) {
 // ─── GET — return all expenses (no token required for reads) ─────────────────
 
 function doGet(e) {
+  // Require token for reads too — prevents anyone with the public URL from
+  // scraping all expense data.
+  if (!e || !e.parameter || e.parameter.token !== TOKEN) {
+    return jsonResponse({ error: 'Unauthorized' })
+  }
   const sheet = getSheet()
   const data = sheet.getDataRange().getValues()
   const headers = data[0]

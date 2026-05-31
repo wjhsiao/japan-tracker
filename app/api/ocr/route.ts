@@ -39,7 +39,16 @@ Rules:
 - category: use 便利商店 for konbini (7-Eleven, FamilyMart, Lawson, etc.)
 - All monetary values must be integers (JPY has no decimals)`
 
+// Max base64 length (~1MB encoded ≈ 750KB raw image). Compressed images are far smaller.
+const MAX_IMAGE_BASE64 = 1_000_000
+
 export async function POST(req: NextRequest) {
+  // Access-code gate: protects this paid endpoint from anonymous abuse.
+  const accessCode = process.env.ACCESS_CODE
+  if (accessCode && req.headers.get('x-access-code') !== accessCode) {
+    return Response.json({ error: 'Unauthorized' }, { status: 401 })
+  }
+
   const apiKey = process.env.GEMINI_API_KEY
   if (!apiKey) {
     return Response.json({ error: 'GEMINI_API_KEY not configured' }, { status: 500 })
@@ -55,6 +64,9 @@ export async function POST(req: NextRequest) {
   const { imageBase64, mimeType } = body
   if (!imageBase64) {
     return Response.json({ error: 'imageBase64 is required' }, { status: 400 })
+  }
+  if (imageBase64.length > MAX_IMAGE_BASE64) {
+    return Response.json({ error: '圖片過大，請重新拍攝' }, { status: 413 })
   }
 
   const payload = {

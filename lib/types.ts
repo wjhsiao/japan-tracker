@@ -60,6 +60,8 @@ export interface Settings {
   exchangeRateJPYtoTWD: number
   /** List of payers (replaces person1Name / person2Name) */
   people: string[]
+  /** Access code typed by user; sent as x-access-code header to protected APIs */
+  accessCode: string
 }
 
 // Categories ordered by frequency of use
@@ -83,4 +85,5 @@ export const DEFAULT_SETTINGS: Settings = {
   startDate: new Date().toISOString().slice(0, 10),
   exchangeRateJPYtoTWD: 0.22,
   people: ['Person 1', 'Person 2'],
+  accessCode: '',
 }

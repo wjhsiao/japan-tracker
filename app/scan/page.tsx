@@ -7,6 +7,7 @@ import ExpenseForm from '../components/expenses/ExpenseForm'
 import { OcrResult } from '@/lib/types'
 import { addExpense } from '@/lib/gas'
 import { compressImage } from '@/lib/utils'
+import { loadSettings } from '@/lib/settings'
 import { Expense } from '@/lib/types'
 
 type Step = 'pick' | 'confirm' | 'error'
@@ -32,9 +33,13 @@ export default function ScanPage() {
       // Compress image before sending
       const { base64, mimeType } = await compressImage(file)
 
+      const accessCode = loadSettings().accessCode
       const res = await fetch('/api/ocr', {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        headers: {
+          'Content-Type': 'application/json',
+          ...(accessCode ? { 'x-access-code': accessCode } : {}),
+        },
         body: JSON.stringify({ imageBase64: base64, mimeType }),
       })
       const data = await res.json()

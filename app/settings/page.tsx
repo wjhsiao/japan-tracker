@@ -127,6 +127,23 @@ export default function SettingsPage() {
           </div>
         </section>
 
+        <section className="rounded-2xl bg-white p-5 shadow-sm ring-1 ring-gray-100 space-y-3">
+          <h2 className="text-sm font-semibold text-gray-700">🔒 存取密碼</h2>
+          <div>
+            <input
+              type="text"
+              value={s.accessCode}
+              onChange={e => update('accessCode', e.target.value)}
+              placeholder="輸入與伺服器相同的密碼"
+              className="input"
+              autoComplete="off"
+            />
+            <p className="mt-2 text-xs text-gray-400 leading-relaxed">
+              此密碼用於保護收據掃描與資料讀取。請輸入與部署環境變數 <code className="text-gray-500">ACCESS_CODE</code> 相同的字串。兩位使用者需各自在自己的手機輸入同一組密碼。
+            </p>
+          </div>
+        </section>
+
         <button type="submit"
           className={`w-full rounded-2xl py-3.5 font-semibold text-white shadow-sm transition active:scale-95 ${
             saved ? 'bg-green-600' : 'bg-red-600 hover:bg-red-700'
