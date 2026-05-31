@@ -1,0 +1,86 @@
+export type Category =
+  | '餐飲'
+  | '交通'
+  | '購物'
+  | '便利商店'
+  | '門票/體驗'
+  | '住宿'
+  | '伴手禮'
+  | '藥品'
+  | '其他'
+
+export type PaymentMethod = '現金' | '信用卡' | 'Suica' | 'PayPay' | '其他'
+
+export type TaxType = '内税' | '外税' | '免税'
+
+export interface ExpenseItem {
+  nameTw: string
+  nameJa: string
+  price: number
+  taxType?: TaxType
+  taxRate?: 8 | 10
+}
+
+export interface TaxBreakdown {
+  rate: 8 | 10
+  taxable: number
+  tax: number
+}
+
+export interface Expense {
+  id: string
+  date: string
+  storeName: string
+  storeNameJa: string
+  items: ExpenseItem[]
+  amountJPY: number
+  category: Category
+  paymentMethod: PaymentMethod
+  paidBy: string
+  notes: string
+  receiptBase64?: string
+  createdAt: string
+}
+
+export interface OcrResult {
+  storeName: string
+  storeNameJa: string
+  items: ExpenseItem[]
+  amountJPY: number
+  taxBreakdown: TaxBreakdown[]
+  category: Category
+  paymentMethod: PaymentMethod
+  date: string
+}
+
+export interface Settings {
+  budgetJPY: number
+  tripDays: number
+  startDate: string
+  exchangeRateJPYtoTWD: number
+  person1Name: string
+  person2Name: string
+}
+
+export const CATEGORIES: { value: Category; emoji: string; color: string }[] = [
+  { value: '餐飲',     emoji: '🍜', color: 'bg-orange-100 text-orange-700 border-orange-200' },
+  { value: '交通',     emoji: '🚃', color: 'bg-blue-100 text-blue-700 border-blue-200' },
+  { value: '購物',     emoji: '🛍', color: 'bg-pink-100 text-pink-700 border-pink-200' },
+  { value: '便利商店', emoji: '🏪', color: 'bg-yellow-100 text-yellow-700 border-yellow-200' },
+  { value: '門票/體驗',emoji: '🎭', color: 'bg-purple-100 text-purple-700 border-purple-200' },
+  { value: '住宿',     emoji: '🏨', color: 'bg-indigo-100 text-indigo-700 border-indigo-200' },
+  { value: '伴手禮',   emoji: '🎁', color: 'bg-rose-100 text-rose-700 border-rose-200' },
+  { value: '藥品',     emoji: '💊', color: 'bg-green-100 text-green-700 border-green-200' },
+  { value: '其他',     emoji: '📝', color: 'bg-gray-100 text-gray-700 border-gray-200' },
+]
+
+export const PAYMENT_METHODS: PaymentMethod[] = ['現金', '信用卡', 'Suica', 'PayPay', '其他']
+
+export const DEFAULT_SETTINGS: Settings = {
+  budgetJPY: 150000,
+  tripDays: 7,
+  startDate: new Date().toISOString().slice(0, 10),
+  exchangeRateJPYtoTWD: 0.22,
+  person1Name: 'Person 1',
+  person2Name: 'Person 2',
+}
