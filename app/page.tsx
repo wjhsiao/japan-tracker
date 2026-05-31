@@ -12,9 +12,18 @@ import { formatJPY, formatTWD, formatDate, sumJPY, today, daysBetween } from '@/
 export default function Dashboard() {
   const { expenses, loading, error, refresh } = useExpenses()
   const [settings, setSettings] = useState<Settings | null>(null)
+  const [toast, setToast] = useState('')
 
   useEffect(() => {
     setSettings(loadSettings())
+    try {
+      const t = sessionStorage.getItem('japan-tracker:toast')
+      if (t) {
+        sessionStorage.removeItem('japan-tracker:toast')
+        setToast(t)
+        setTimeout(() => setToast(''), 2500)
+      }
+    } catch {}
   }, [])
 
   if (!settings) return null
@@ -47,6 +56,11 @@ export default function Dashboard() {
         </Link>
       }
     >
+      {toast && (
+        <div className="fixed left-1/2 top-16 z-50 -translate-x-1/2 rounded-full bg-gray-900 px-4 py-2 text-sm font-medium text-white shadow-lg animate-[fadeIn_0.2s_ease-out]">
+          ✓ {toast}
+        </div>
+      )}
       <div className="space-y-4 px-4">
         {/* Today */}
         <div className="rounded-2xl bg-white p-5 shadow-sm ring-1 ring-gray-100">

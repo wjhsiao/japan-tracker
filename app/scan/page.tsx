@@ -7,7 +7,7 @@ import ExpenseForm from '../components/expenses/ExpenseForm'
 import { OcrResult } from '@/lib/types'
 import { addExpense } from '@/lib/gas'
 import { invalidateExpensesCache } from '@/lib/useExpenses'
-import { compressImage, fetchWithTimeout } from '@/lib/utils'
+import { compressImage, fetchWithTimeout, formatJPY } from '@/lib/utils'
 import { loadSettings } from '@/lib/settings'
 import { Expense } from '@/lib/types'
 
@@ -57,6 +57,7 @@ export default function ScanPage() {
   async function handleSave(expense: Expense) {
     await addExpense(expense)
     invalidateExpensesCache()
+    try { sessionStorage.setItem('japan-tracker:toast', `已新增 ${formatJPY(expense.amountJPY)}`) } catch {}
     router.push('/')
   }
 
