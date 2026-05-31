@@ -10,6 +10,11 @@ export default function SettingsPage() {
   const [s, setS] = useState(loadSettings())
   const [saved, setSaved] = useState(false)
   const [newPerson, setNewPerson] = useState('')
+  // Numeric fields are backed by raw text so they can be cleared while typing;
+  // they get parsed + clamped on save.
+  const [tripDaysText, setTripDaysText] = useState(String(s.tripDays))
+  const [budgetText, setBudgetText] = useState(String(s.budgetJPY))
+  const [rateText, setRateText] = useState(String(s.exchangeRateJPYtoTWD))
 
   function update<K extends keyof typeof s>(k: K, v: typeof s[K]) {
     setS(prev => ({ ...prev, [k]: v }))
@@ -36,7 +41,17 @@ export default function SettingsPage() {
 
   function handleSave(e: React.FormEvent) {
     e.preventDefault()
-    saveSettings(s)
+    // Parse + clamp the text-backed numeric fields
+    const tripDays = Math.min(60, Math.max(1, parseInt(tripDaysText) || 1))
+    const budgetJPY = Math.max(0, parseInt(budgetText) || 0)
+    const exchangeRateJPYtoTWD = Math.max(0.001, parseFloat(rateText) || 0.001)
+    const final = { ...s, tripDays, budgetJPY, exchangeRateJPYtoTWD }
+    // Reflect clamped values back into the inputs
+    setS(final)
+    setTripDaysText(String(tripDays))
+    setBudgetText(String(budgetJPY))
+    setRateText(String(exchangeRateJPYtoTWD))
+    saveSettings(final)
     setSaved(true)
     setTimeout(() => setSaved(false), 2000)
   }
@@ -54,8 +69,8 @@ export default function SettingsPage() {
           </div>
           <div>
             <label className="label">旅遊天數</label>
-            <input type="number" min="1" max="60" value={s.tripDays}
-              onChange={e => update('tripDays', parseInt(e.target.value) || 1)} className="input" />
+            <input type="number" inputMode="numeric" min="1" max="60" value={tripDaysText}
+              onChange={e => { setTripDaysText(e.target.value); setSaved(false) }} className="input" />
           </div>
         </section>
 
@@ -65,18 +80,18 @@ export default function SettingsPage() {
             <label className="label">旅遊總預算（JPY）</label>
             <div className="relative">
               <span className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400">¥</span>
-              <input type="number" min="1" value={s.budgetJPY}
-                onChange={e => update('budgetJPY', parseInt(e.target.value) || 0)}
+              <input type="number" inputMode="numeric" min="0" value={budgetText}
+                onChange={e => { setBudgetText(e.target.value); setSaved(false) }}
                 className="input pl-7" />
             </div>
           </div>
           <div>
             <label className="label">匯率（1 JPY = ? TWD）</label>
-            <input type="number" step="0.001" min="0.001" value={s.exchangeRateJPYtoTWD}
-              onChange={e => update('exchangeRateJPYtoTWD', parseFloat(e.target.value) || 0)}
+            <input type="number" inputMode="decimal" step="0.001" min="0.001" value={rateText}
+              onChange={e => { setRateText(e.target.value); setSaved(false) }}
               className="input" />
             <p className="mt-1 text-xs text-gray-400">
-              目前設定：¥100 ≈ NT${(s.exchangeRateJPYtoTWD * 100).toFixed(1)}
+              目前設定：¥100 ≈ NT${((parseFloat(rateText) || 0) * 100).toFixed(1)}
             </p>
           </div>
         </section>
