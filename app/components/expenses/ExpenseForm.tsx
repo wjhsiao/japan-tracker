@@ -7,7 +7,8 @@ import { loadSettings } from '@/lib/settings'
 import { today } from '@/lib/utils'
 
 interface Props {
-  initial?: Partial<OcrResult>
+  // Covers both OCR results (new scan) and existing Expense edits (paidBy/notes)
+  initial?: Partial<OcrResult> & { paidBy?: string; notes?: string }
   onSave: (expense: Expense) => Promise<void>
   onCancel: () => void
   saveLabel?: string
@@ -26,8 +27,8 @@ export default function ExpenseForm({ initial, onSave, onCancel, saveLabel = '�
   const [amountJPY, setAmountJPY] = useState(initial?.amountJPY ? String(initial.amountJPY) : '')
   const [category, setCategory] = useState<Category>(initial?.category ?? '其他')
   const [paymentMethod, setPaymentMethod] = useState(initial?.paymentMethod ?? '現金')
-  const [paidBy, setPaidBy] = useState(settings.people[0] ?? '')
-  const [notes, setNotes] = useState('')
+  const [paidBy, setPaidBy] = useState(initial?.paidBy ?? settings.people[0] ?? '')
+  const [notes, setNotes] = useState(initial?.notes ?? '')
   const [items, setItems] = useState(initial?.items ?? [])
 
   // When OCR result arrives after form is already mounted, sync the fields
@@ -40,6 +41,8 @@ export default function ExpenseForm({ initial, onSave, onCancel, saveLabel = '�
     if (initial.category) setCategory(initial.category)
     if (initial.paymentMethod) setPaymentMethod(initial.paymentMethod)
     if (initial.items) setItems(initial.items)
+    if (initial.paidBy) setPaidBy(initial.paidBy)
+    if (initial.notes) setNotes(initial.notes)
   }, [initial])
 
   async function handleSubmit(e: React.FormEvent) {

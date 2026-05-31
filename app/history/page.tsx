@@ -1,35 +1,33 @@
 'use client'
 
-import { useEffect, useState } from 'react'
+import { useState } from 'react'
 import PageShell from '../components/layout/PageShell'
 import CategoryBadge from '../components/expenses/CategoryBadge'
 import ExpenseForm from '../components/expenses/ExpenseForm'
 import { Expense, Category } from '@/lib/types'
-import { fetchExpenses, deleteExpense, updateExpense } from '@/lib/gas'
+import { deleteExpense, updateExpense } from '@/lib/gas'
+import { useExpenses, invalidateExpensesCache } from '@/lib/useExpenses'
 import { loadSettings } from '@/lib/settings'
 import { formatJPY, formatTWD, formatDate, groupByDate, sumJPY } from '@/lib/utils'
 
 export default function HistoryPage() {
-  const [expenses, setExpenses] = useState<Expense[]>([])
-  const [loading, setLoading] = useState(true)
+  const { expenses, loading, error, refresh, setExpenses } = useExpenses()
   const [editing, setEditing] = useState<Expense | null>(null)
   const [filterCat, setFilterCat] = useState<Category | 'all'>('all')
   const [filterPerson, setFilterPerson] = useState<string | 'all'>('all')
   const settings = loadSettings()
 
-  useEffect(() => {
-    fetchExpenses().then(setExpenses).catch(() => {}).finally(() => setLoading(false))
-  }, [])
-
   async function handleDelete(id: string) {
     if (!confirm('確定刪除這筆消費？')) return
     await deleteExpense(id)
     setExpenses(prev => prev.filter(e => e.id !== id))
+    invalidateExpensesCache()
   }
 
   async function handleUpdate(expense: Expense) {
     await updateExpense(expense)
     setExpenses(prev => prev.map(e => e.id === expense.id ? expense : e))
+    invalidateExpensesCache()
     setEditing(null)
   }
 
@@ -85,6 +83,15 @@ export default function HistoryPage() {
 
       {loading ? (
         <div className="flex h-40 items-center justify-center text-sm text-gray-400">載入中...</div>
+      ) : error ? (
+        <div className="flex flex-col items-center py-20 text-center">
+          <p className="text-3xl">⚠️</p>
+          <p className="mt-3 text-sm text-gray-500">{error}</p>
+          <button onClick={refresh}
+            className="mt-3 rounded-xl bg-gray-100 px-4 py-2 text-sm font-medium text-gray-700 hover:bg-gray-200 transition">
+            重試
+          </button>
+        </div>
       ) : grouped.size === 0 ? (
         <div className="flex flex-col items-center py-20 text-center">
           <p className="text-4xl">🧾</p>

@@ -4,23 +4,17 @@ import { useEffect, useState } from 'react'
 import Link from 'next/link'
 import PageShell from './components/layout/PageShell'
 import CategoryBadge from './components/expenses/CategoryBadge'
-import { Expense, Settings } from '@/lib/types'
+import { Settings } from '@/lib/types'
 import { loadSettings } from '@/lib/settings'
-import { fetchExpenses } from '@/lib/gas'
+import { useExpenses } from '@/lib/useExpenses'
 import { formatJPY, formatTWD, formatDate, sumJPY, today, daysBetween } from '@/lib/utils'
 
 export default function Dashboard() {
-  const [expenses, setExpenses] = useState<Expense[]>([])
+  const { expenses, loading, error, refresh } = useExpenses()
   const [settings, setSettings] = useState<Settings | null>(null)
-  const [loading, setLoading] = useState(true)
 
   useEffect(() => {
-    const s = loadSettings()
-    setSettings(s)
-    fetchExpenses()
-      .then(setExpenses)
-      .catch(() => {})
-      .finally(() => setLoading(false))
+    setSettings(loadSettings())
   }, [])
 
   if (!settings) return null
@@ -78,13 +72,13 @@ export default function Dashboard() {
           <div className="mt-3">
             <div className="mb-1 flex justify-between text-xs text-gray-500">
               <span>{pct.toFixed(0)}% 已使用</span>
-              <span className={overBudget ? 'font-semibold text-red-600' : ''}>
+              <span>
                 {overBudget ? `超支 ${formatJPY(Math.abs(remaining))}` : `剩餘 ${formatJPY(remaining)}`}
               </span>
             </div>
             <div className="h-2.5 w-full overflow-hidden rounded-full bg-gray-100">
               <div
-                className={`h-full rounded-full transition-all ${overBudget ? 'bg-red-500' : pct > 80 ? 'bg-amber-500' : 'bg-emerald-500'}`}
+                className="h-full rounded-full bg-gray-800 transition-all"
                 style={{ width: `${pct}%` }}
               />
             </div>
@@ -129,6 +123,15 @@ export default function Dashboard() {
         {/* Recent */}
         {loading ? (
           <div className="text-center text-sm text-gray-400 py-4">載入中...</div>
+        ) : error ? (
+          <div className="rounded-2xl bg-white py-8 text-center shadow-sm ring-1 ring-gray-100">
+            <p className="text-2xl">⚠️</p>
+            <p className="mt-2 text-sm text-gray-500">{error}</p>
+            <button onClick={refresh}
+              className="mt-3 rounded-xl bg-gray-100 px-4 py-2 text-sm font-medium text-gray-700 hover:bg-gray-200 transition">
+              重試
+            </button>
+          </div>
         ) : recent.length > 0 ? (
           <div>
             <div className="mb-2 flex items-center justify-between">
