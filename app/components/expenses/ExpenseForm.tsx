@@ -2,7 +2,7 @@
 
 import { useState, useEffect } from 'react'
 import { v4 as uuidv4 } from 'uuid'
-import { Expense, OcrResult, Category, CATEGORIES, PAYMENT_METHODS } from '@/lib/types'
+import { Expense, OcrResult, Category, CATEGORIES, PAYMENT_METHODS, PAYMENT_COLORS } from '@/lib/types'
 import { loadSettings } from '@/lib/settings'
 import { today } from '@/lib/utils'
 
@@ -137,7 +137,7 @@ export default function ExpenseForm({ initial, onSave, onCancel, saveLabel = 'å„
             <button key={m} type="button" onClick={() => setPaymentMethod(m)}
               className={`rounded-xl border-2 px-4 py-2 text-sm font-medium transition-all ${
                 paymentMethod === m
-                  ? 'border-red-500 bg-red-50 text-red-700'
+                  ? PAYMENT_COLORS[m]
                   : 'border-gray-100 bg-gray-50 text-gray-600 hover:border-gray-200'
               }`}>
               {m}
