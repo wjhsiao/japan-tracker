@@ -14,6 +14,7 @@ export default function HistoryPage() {
   const [loading, setLoading] = useState(true)
   const [editing, setEditing] = useState<Expense | null>(null)
   const [filterCat, setFilterCat] = useState<Category | 'all'>('all')
+  const [filterPerson, setFilterPerson] = useState<string | 'all'>('all')
   const settings = loadSettings()
 
   useEffect(() => {
@@ -32,9 +33,13 @@ export default function HistoryPage() {
     setEditing(null)
   }
 
-  const filtered = filterCat === 'all' ? expenses : expenses.filter(e => e.category === filterCat)
+  const filtered = expenses
+    .filter(e => filterCat === 'all' || e.category === filterCat)
+    .filter(e => filterPerson === 'all' || e.paidBy === filterPerson)
+
   const grouped = groupByDate(filtered)
   const categories = Array.from(new Set(expenses.map(e => e.category)))
+  const people = Array.from(new Set(expenses.map(e => e.paidBy).filter(Boolean)))
 
   if (editing) {
     return (
@@ -49,26 +54,31 @@ export default function HistoryPage() {
     )
   }
 
+  const chipClass = (active: boolean) =>
+    `shrink-0 rounded-full px-3 py-1 text-xs font-medium border transition ${
+      active ? 'bg-red-600 text-white border-red-600' : 'bg-white text-gray-600 border-gray-200'
+    }`
+
   return (
     <PageShell title="消費紀錄" action={
-      <span className="text-sm text-gray-500">{expenses.length} 筆</span>
+      <span className="text-sm text-gray-500">{filtered.length} 筆</span>
     }>
-      {/* Filter chips */}
+      {/* Category filter */}
       {categories.length > 0 && (
-        <div className="flex gap-2 overflow-x-auto px-4 pb-3 pt-0 scrollbar-hide">
-          <button
-            onClick={() => setFilterCat('all')}
-            className={`shrink-0 rounded-full px-3 py-1 text-xs font-medium border transition ${
-              filterCat === 'all' ? 'bg-red-600 text-white border-red-600' : 'bg-white text-gray-600 border-gray-200'
-            }`}
-          >全部</button>
+        <div className="flex gap-2 overflow-x-auto px-4 pb-2 pt-0 scrollbar-hide">
+          <button onClick={() => setFilterCat('all')} className={chipClass(filterCat === 'all')}>全部</button>
           {categories.map(c => (
-            <button key={c}
-              onClick={() => setFilterCat(c)}
-              className={`shrink-0 rounded-full px-3 py-1 text-xs font-medium border transition ${
-                filterCat === c ? 'bg-red-600 text-white border-red-600' : 'bg-white text-gray-600 border-gray-200'
-              }`}
-            >{c}</button>
+            <button key={c} onClick={() => setFilterCat(c)} className={chipClass(filterCat === c)}>{c}</button>
+          ))}
+        </div>
+      )}
+
+      {/* Person filter */}
+      {people.length > 1 && (
+        <div className="flex gap-2 overflow-x-auto px-4 pb-3 scrollbar-hide">
+          <button onClick={() => setFilterPerson('all')} className={chipClass(filterPerson === 'all')}>所有人</button>
+          {people.map(p => (
+            <button key={p} onClick={() => setFilterPerson(p)} className={chipClass(filterPerson === p)}>{p}</button>
           ))}
         </div>
       )}
