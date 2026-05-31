@@ -57,6 +57,11 @@ function doGet(e) {
         try { obj[h] = JSON.parse(row[i] || '[]') } catch { obj[h] = [] }
       } else if (h === 'amountJPY') {
         obj[h] = Number(row[i]) || 0
+      } else if (h === 'date') {
+        // Sheets may store the date as a Date object — format to YYYY-MM-DD
+        obj[h] = (Object.prototype.toString.call(row[i]) === '[object Date]')
+          ? Utilities.formatDate(row[i], Session.getScriptTimeZone(), 'yyyy-MM-dd')
+          : String(row[i]).slice(0, 10)
       } else {
         obj[h] = row[i]
       }

@@ -20,7 +20,10 @@ export async function fetchExpenses(): Promise<Expense[]> {
   if (res.status === 401) throw new Error('存取密碼錯誤或未設定，請至設定頁輸入')
   if (!res.ok) throw new Error('Failed to fetch expenses')
   const data = await res.json()
-  return Array.isArray(data) ? data : []
+  if (!Array.isArray(data)) return []
+  // Normalize date to YYYY-MM-DD — Google Sheets may return it as a full ISO
+  // datetime, which breaks date matching / formatting in the UI.
+  return data.map((e: Expense) => ({ ...e, date: String(e.date).slice(0, 10) }))
 }
 
 export async function addExpense(expense: Expense): Promise<void> {
