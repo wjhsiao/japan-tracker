@@ -1,6 +1,6 @@
 'use client'
 
-import { useEffect, useState } from 'react'
+import { useState } from 'react'
 import PageShell from '../components/layout/PageShell'
 import CategoryBadge from '../components/expenses/CategoryBadge'
 import ExpenseForm from '../components/expenses/ExpenseForm'

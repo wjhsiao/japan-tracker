@@ -1,6 +1,5 @@
 'use client'
 
-import { useEffect, useState } from 'react'
 import PageShell from '../components/layout/PageShell'
 import PieChart, { COLORS } from '../components/ui/PieChart'
 import { CATEGORIES } from '@/lib/types'
