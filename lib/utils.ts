@@ -34,9 +34,12 @@ export function daysBetween(start: string, end: string): number {
   return Math.round((e.getTime() - s.getTime()) / 86400000)
 }
 
-export function groupByDate<T extends { date: string }>(items: T[]): Map<string, T[]> {
+export function groupByDate<T extends { date: string; createdAt?: string }>(items: T[]): Map<string, T[]> {
   const map = new Map<string, T[]>()
-  const sorted = [...items].sort((a, b) => b.date.localeCompare(a.date) || b.date.localeCompare(a.date))
+  // Newest date first; within the same date, newest createdAt first
+  const sorted = [...items].sort(
+    (a, b) => b.date.localeCompare(a.date) || (b.createdAt ?? '').localeCompare(a.createdAt ?? '')
+  )
   for (const item of sorted) {
     const list = map.get(item.date) ?? []
     list.push(item)
@@ -63,6 +66,29 @@ export function fileToBase64(file: File): Promise<string> {
 
 export function getMimeType(file: File): string {
   return file.type || 'image/jpeg'
+}
+
+/**
+ * fetch with a timeout (default 15s). Aborts the request if it hangs, throwing
+ * a clear error instead of leaving the promise pending forever.
+ */
+export async function fetchWithTimeout(
+  input: RequestInfo | URL,
+  init: RequestInit = {},
+  timeoutMs = 15000
+): Promise<Response> {
+  const controller = new AbortController()
+  const timer = setTimeout(() => controller.abort(), timeoutMs)
+  try {
+    return await fetch(input, { ...init, signal: controller.signal })
+  } catch (err) {
+    if (err instanceof Error && err.name === 'AbortError') {
+      throw new Error('連線逾時，請稍後再試')
+    }
+    throw err
+  } finally {
+    clearTimeout(timer)
+  }
 }
 
 /**

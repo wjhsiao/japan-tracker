@@ -1,4 +1,5 @@
 import { NextRequest } from 'next/server'
+import { fetchWithTimeout } from '@/lib/utils'
 
 // GAS URL: readable from both server and client (NEXT_PUBLIC_ prefix)
 const GAS_URL = process.env.NEXT_PUBLIC_APPS_SCRIPT_URL ?? ''
@@ -25,7 +26,7 @@ export async function GET(req: NextRequest) {
   try {
     // Inject GAS token so doGet can verify (prevents direct GAS URL scraping)
     const url = `${GAS_URL}?token=${encodeURIComponent(GAS_TOKEN)}`
-    const res = await fetch(url, { cache: 'no-store', redirect: 'follow' })
+    const res = await fetchWithTimeout(url, { cache: 'no-store', redirect: 'follow' })
     const data = await res.json()
     return Response.json(Array.isArray(data) ? data : [])
   } catch (err) {
@@ -44,7 +45,7 @@ export async function POST(req: NextRequest) {
     const body = await req.json()
     // Attach the GAS secret token — Apps Script verifies this before writing
     const payload = { ...body, token: GAS_TOKEN }
-    const res = await fetch(GAS_URL, {
+    const res = await fetchWithTimeout(GAS_URL, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify(payload),

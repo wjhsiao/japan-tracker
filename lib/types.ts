@@ -38,7 +38,6 @@ export interface Expense {
   paymentMethod: PaymentMethod
   paidBy: string
   notes: string
-  receiptBase64?: string
   createdAt: string
 }
 

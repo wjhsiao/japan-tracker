@@ -1,4 +1,29 @@
 import { NextRequest } from 'next/server'
+import { fetchWithTimeout } from '@/lib/utils'
+import { CATEGORIES, PAYMENT_METHODS, Category, PaymentMethod, OcrResult } from '@/lib/types'
+
+const CATEGORY_VALUES = CATEGORIES.map(c => c.value)
+
+/** Coerce Gemini's raw output into a safe OcrResult; never trust the model blindly. */
+function sanitizeOcr(raw: unknown): OcrResult {
+  const r = (raw ?? {}) as Record<string, unknown>
+  const amount = Math.round(Number(r.amountJPY))
+  const cat = r.category as Category
+  const pay = r.paymentMethod as PaymentMethod
+  const dateStr = typeof r.date === 'string' && /^\d{4}-\d{2}-\d{2}$/.test(r.date)
+    ? r.date
+    : new Date().toISOString().slice(0, 10)
+  return {
+    storeName: typeof r.storeName === 'string' ? r.storeName : '',
+    storeNameJa: typeof r.storeNameJa === 'string' ? r.storeNameJa : '',
+    items: Array.isArray(r.items) ? r.items : [],
+    amountJPY: Number.isFinite(amount) && amount > 0 ? amount : 0,
+    taxBreakdown: Array.isArray(r.taxBreakdown) ? r.taxBreakdown : [],
+    category: CATEGORY_VALUES.includes(cat) ? cat : '其他',
+    paymentMethod: PAYMENT_METHODS.includes(pay) ? pay : '現金',
+    date: dateStr,
+  }
+}
 
 const GEMINI_URL =
   'https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash-lite-preview-06-17:generateContent'
@@ -86,11 +111,11 @@ export async function POST(req: NextRequest) {
   }
 
   try {
-    const res = await fetch(`${GEMINI_URL}?key=${apiKey}`, {
+    const res = await fetchWithTimeout(`${GEMINI_URL}?key=${apiKey}`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify(payload),
-    })
+    }, 20000)
 
     if (!res.ok) {
       const err = await res.text()
@@ -101,9 +126,14 @@ export async function POST(req: NextRequest) {
     const text: string = data.candidates?.[0]?.content?.parts?.[0]?.text ?? ''
 
     const cleaned = text.replace(/```json\n?/g, '').replace(/```\n?/g, '').trim()
-    const parsed = JSON.parse(cleaned)
+    let parsed: unknown
+    try {
+      parsed = JSON.parse(cleaned)
+    } catch {
+      return Response.json({ error: '辨識結果格式錯誤，請改用手動輸入' }, { status: 502 })
+    }
 
-    return Response.json(parsed)
+    return Response.json(sanitizeOcr(parsed))
   } catch (err) {
     return Response.json({ error: String(err) }, { status: 500 })
   }

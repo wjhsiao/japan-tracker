@@ -7,7 +7,7 @@ import ExpenseForm from '../components/expenses/ExpenseForm'
 import { OcrResult } from '@/lib/types'
 import { addExpense } from '@/lib/gas'
 import { invalidateExpensesCache } from '@/lib/useExpenses'
-import { compressImage } from '@/lib/utils'
+import { compressImage, fetchWithTimeout } from '@/lib/utils'
 import { loadSettings } from '@/lib/settings'
 import { Expense } from '@/lib/types'
 
@@ -35,14 +35,14 @@ export default function ScanPage() {
       const { base64, mimeType } = await compressImage(file)
 
       const accessCode = loadSettings().accessCode
-      const res = await fetch('/api/ocr', {
+      const res = await fetchWithTimeout('/api/ocr', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
           ...(accessCode ? { 'x-access-code': accessCode } : {}),
         },
         body: JSON.stringify({ imageBase64: base64, mimeType }),
-      })
+      }, 25000)
       const data = await res.json()
       if (!res.ok || data.error) throw new Error(data.error ?? 'OCR failed')
       setOcrResult(data)

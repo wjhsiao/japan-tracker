@@ -1,4 +1,5 @@
 import { Expense } from './types'
+import { fetchWithTimeout } from './utils'
 
 const BASE = '/api/expenses'
 const SETTINGS_KEY = 'japan-tracker:settings'
@@ -15,7 +16,7 @@ function authHeaders(): Record<string, string> {
 }
 
 export async function fetchExpenses(): Promise<Expense[]> {
-  const res = await fetch(BASE, { cache: 'no-store', headers: { ...authHeaders() } })
+  const res = await fetchWithTimeout(BASE, { cache: 'no-store', headers: { ...authHeaders() } })
   if (res.status === 401) throw new Error('存取密碼錯誤或未設定，請至設定頁輸入')
   if (!res.ok) throw new Error('Failed to fetch expenses')
   const data = await res.json()
@@ -23,7 +24,7 @@ export async function fetchExpenses(): Promise<Expense[]> {
 }
 
 export async function addExpense(expense: Expense): Promise<void> {
-  const res = await fetch(BASE, {
+  const res = await fetchWithTimeout(BASE, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json', ...authHeaders() },
     body: JSON.stringify({ action: 'add', expense }),
@@ -32,7 +33,7 @@ export async function addExpense(expense: Expense): Promise<void> {
 }
 
 export async function deleteExpense(id: string): Promise<void> {
-  const res = await fetch(BASE, {
+  const res = await fetchWithTimeout(BASE, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json', ...authHeaders() },
     body: JSON.stringify({ action: 'delete', id }),
@@ -41,7 +42,7 @@ export async function deleteExpense(id: string): Promise<void> {
 }
 
 export async function updateExpense(expense: Expense): Promise<void> {
-  const res = await fetch(BASE, {
+  const res = await fetchWithTimeout(BASE, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json', ...authHeaders() },
     body: JSON.stringify({ action: 'update', expense }),
