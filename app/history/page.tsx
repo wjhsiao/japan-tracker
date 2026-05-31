@@ -41,7 +41,6 @@ export default function HistoryPage() {
       <PageShell title="編輯消費">
         <ExpenseForm
           initial={{ ...editing, items: editing.items }}
-          receiptBase64={editing.receiptBase64}
           onSave={handleUpdate}
           onCancel={() => setEditing(null)}
           saveLabel="更新"

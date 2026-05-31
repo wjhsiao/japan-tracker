@@ -1,6 +1,6 @@
 'use client'
 
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import { v4 as uuidv4 } from 'uuid'
 import { Expense, OcrResult, Category, CATEGORIES, PAYMENT_METHODS } from '@/lib/types'
 import { loadSettings } from '@/lib/settings'
@@ -8,13 +8,14 @@ import { today } from '@/lib/utils'
 
 interface Props {
   initial?: Partial<OcrResult>
-  receiptBase64?: string
   onSave: (expense: Expense) => Promise<void>
   onCancel: () => void
   saveLabel?: string
+  /** While true, disables the save button (OCR still loading) */
+  disabled?: boolean
 }
 
-export default function ExpenseForm({ initial, receiptBase64, onSave, onCancel, saveLabel = '儲存' }: Props) {
+export default function ExpenseForm({ initial, onSave, onCancel, saveLabel = '儲存', disabled = false }: Props) {
   const settings = loadSettings()
   const [saving, setSaving] = useState(false)
   const [error, setError] = useState('')
@@ -27,9 +28,23 @@ export default function ExpenseForm({ initial, receiptBase64, onSave, onCancel, 
   const [paymentMethod, setPaymentMethod] = useState(initial?.paymentMethod ?? '現金')
   const [paidBy, setPaidBy] = useState(settings.person1Name)
   const [notes, setNotes] = useState('')
+  const [items, setItems] = useState(initial?.items ?? [])
+
+  // When OCR result arrives after form is already mounted, sync the fields
+  useEffect(() => {
+    if (!initial) return
+    if (initial.date) setDate(initial.date)
+    if (initial.storeName) setStoreName(initial.storeName)
+    if (initial.storeNameJa) setStoreNameJa(initial.storeNameJa)
+    if (initial.amountJPY) setAmountJPY(String(initial.amountJPY))
+    if (initial.category) setCategory(initial.category)
+    if (initial.paymentMethod) setPaymentMethod(initial.paymentMethod)
+    if (initial.items) setItems(initial.items)
+  }, [initial])
 
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault()
+    if (disabled) return
     const amount = parseInt(amountJPY.replace(/,/g, ''), 10)
     if (!amount || amount <= 0) { setError('請輸入有效金額'); return }
     setSaving(true)
@@ -40,13 +55,12 @@ export default function ExpenseForm({ initial, receiptBase64, onSave, onCancel, 
         date,
         storeName: storeName || '未知店家',
         storeNameJa,
-        items: initial?.items ?? [],
+        items,
         amountJPY: amount,
         category,
         paymentMethod,
         paidBy,
         notes,
-        receiptBase64,
         createdAt: new Date().toISOString(),
       })
     } catch (err) {
@@ -54,6 +68,8 @@ export default function ExpenseForm({ initial, receiptBase64, onSave, onCancel, 
       setSaving(false)
     }
   }
+
+  const isBusy = saving || disabled
 
   return (
     <form onSubmit={handleSubmit} className="space-y-4 px-4">
@@ -109,21 +125,49 @@ export default function ExpenseForm({ initial, receiptBase64, onSave, onCancel, 
         </div>
       </div>
 
-      {/* Payment & Payer */}
-      <div className="grid grid-cols-2 gap-3">
-        <div>
-          <label className="label">付款方式</label>
-          <select value={paymentMethod} onChange={e => setPaymentMethod(e.target.value as typeof paymentMethod)}
-            className="input">
-            {PAYMENT_METHODS.map(m => <option key={m}>{m}</option>)}
-          </select>
+      {/* Payment method */}
+      <div>
+        <label className="label">付款方式</label>
+        <div className="flex gap-2 flex-wrap">
+          {PAYMENT_METHODS.map(m => (
+            <button key={m} type="button" onClick={() => setPaymentMethod(m)}
+              className={`rounded-xl border-2 px-4 py-2 text-sm font-medium transition-all ${
+                paymentMethod === m
+                  ? 'border-red-500 bg-red-50 text-red-700'
+                  : 'border-gray-100 bg-gray-50 text-gray-600 hover:border-gray-200'
+              }`}>
+              {m}
+            </button>
+          ))}
         </div>
-        <div>
-          <label className="label">付款人</label>
-          <select value={paidBy} onChange={e => setPaidBy(e.target.value)} className="input">
-            <option>{settings.person1Name}</option>
-            <option>{settings.person2Name}</option>
-          </select>
+      </div>
+
+      {/* Payer */}
+      <div>
+        <label className="label">付款人</label>
+        <div className="flex gap-2 flex-wrap">
+          {settings.person1Name && (
+            <button key={settings.person1Name} type="button"
+              onClick={() => setPaidBy(settings.person1Name)}
+              className={`rounded-xl border-2 px-5 py-2.5 text-sm font-semibold transition-all ${
+                paidBy === settings.person1Name
+                  ? 'border-red-500 bg-red-50 text-red-700'
+                  : 'border-gray-100 bg-gray-50 text-gray-600 hover:border-gray-200'
+              }`}>
+              {settings.person1Name}
+            </button>
+          )}
+          {settings.person2Name && (
+            <button key={settings.person2Name} type="button"
+              onClick={() => setPaidBy(settings.person2Name)}
+              className={`rounded-xl border-2 px-5 py-2.5 text-sm font-semibold transition-all ${
+                paidBy === settings.person2Name
+                  ? 'border-red-500 bg-red-50 text-red-700'
+                  : 'border-gray-100 bg-gray-50 text-gray-600 hover:border-gray-200'
+              }`}>
+              {settings.person2Name}
+            </button>
+          )}
         </div>
       </div>
 
@@ -136,11 +180,11 @@ export default function ExpenseForm({ initial, receiptBase64, onSave, onCancel, 
       </div>
 
       {/* Items preview */}
-      {initial?.items && initial.items.length > 0 && (
+      {items.length > 0 && (
         <div>
           <label className="label">明細</label>
           <div className="rounded-xl bg-gray-50 divide-y divide-gray-100 overflow-hidden">
-            {initial.items.map((item, i) => (
+            {items.map((item, i) => (
               <div key={i} className="flex items-center justify-between px-3 py-2 text-sm">
                 <div>
                   <p className="font-medium text-gray-800">{item.nameTw}</p>
@@ -158,9 +202,9 @@ export default function ExpenseForm({ initial, receiptBase64, onSave, onCancel, 
           className="flex-1 rounded-xl border border-gray-200 py-3 font-semibold text-gray-600 hover:bg-gray-50 transition">
           取消
         </button>
-        <button type="submit" disabled={saving}
+        <button type="submit" disabled={isBusy}
           className="flex-1 rounded-xl bg-red-600 py-3 font-semibold text-white shadow-sm transition hover:bg-red-700 disabled:opacity-60 active:scale-95">
-          {saving ? '儲存中...' : saveLabel}
+          {saving ? '儲存中...' : disabled ? '辨識中...' : saveLabel}
         </button>
       </div>
     </form>

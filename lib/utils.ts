@@ -64,3 +64,41 @@ export function fileToBase64(file: File): Promise<string> {
 export function getMimeType(file: File): string {
   return file.type || 'image/jpeg'
 }
+
+/**
+ * Compress an image file using canvas.
+ * Resizes to max 1280px on the longest side and encodes as JPEG at given quality.
+ * Returns { base64, mimeType } ready to send to the OCR API.
+ */
+export function compressImage(
+  file: File,
+  maxPx = 1280,
+  quality = 0.75
+): Promise<{ base64: string; mimeType: string }> {
+  return new Promise((resolve, reject) => {
+    const img = new Image()
+    const url = URL.createObjectURL(file)
+    img.onload = () => {
+      URL.revokeObjectURL(url)
+      let { width, height } = img
+      if (width > maxPx || height > maxPx) {
+        if (width >= height) {
+          height = Math.round((height * maxPx) / width)
+          width = maxPx
+        } else {
+          width = Math.round((width * maxPx) / height)
+          height = maxPx
+        }
+      }
+      const canvas = document.createElement('canvas')
+      canvas.width = width
+      canvas.height = height
+      const ctx = canvas.getContext('2d')!
+      ctx.drawImage(img, 0, 0, width, height)
+      const dataUrl = canvas.toDataURL('image/jpeg', quality)
+      resolve({ base64: dataUrl.split(',')[1], mimeType: 'image/jpeg' })
+    }
+    img.onerror = reject
+    img.src = url
+  })
+}
