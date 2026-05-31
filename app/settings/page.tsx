@@ -9,10 +9,29 @@ export default function SettingsPage() {
   const router = useRouter()
   const [s, setS] = useState(loadSettings())
   const [saved, setSaved] = useState(false)
+  const [newPerson, setNewPerson] = useState('')
 
   function update<K extends keyof typeof s>(k: K, v: typeof s[K]) {
     setS(prev => ({ ...prev, [k]: v }))
     setSaved(false)
+  }
+
+  function addPerson() {
+    const name = newPerson.trim()
+    if (!name || s.people.includes(name)) return
+    update('people', [...s.people, name])
+    setNewPerson('')
+  }
+
+  function removePerson(name: string) {
+    if (s.people.length <= 1) return // keep at least one
+    update('people', s.people.filter(p => p !== name))
+  }
+
+  function renamePerson(idx: number, val: string) {
+    const updated = [...s.people]
+    updated[idx] = val
+    update('people', updated)
   }
 
   function handleSave(e: React.FormEvent) {
@@ -63,16 +82,48 @@ export default function SettingsPage() {
         </section>
 
         <section className="rounded-2xl bg-white p-5 shadow-sm ring-1 ring-gray-100 space-y-4">
-          <h2 className="text-sm font-semibold text-gray-700">👤 旅伴設定</h2>
-          <div>
-            <label className="label">旅伴 1 名稱</label>
-            <input type="text" value={s.person1Name}
-              onChange={e => update('person1Name', e.target.value)} className="input" />
+          <h2 className="text-sm font-semibold text-gray-700">👤 付款人名單</h2>
+
+          {/* Existing people */}
+          <div className="space-y-2">
+            {s.people.map((person, idx) => (
+              <div key={idx} className="flex items-center gap-2">
+                <input
+                  type="text"
+                  value={person}
+                  onChange={e => renamePerson(idx, e.target.value)}
+                  className="input flex-1"
+                />
+                <button
+                  type="button"
+                  onClick={() => removePerson(person)}
+                  disabled={s.people.length <= 1}
+                  className="shrink-0 rounded-xl border border-gray-200 px-3 py-2.5 text-sm text-gray-400 hover:border-red-200 hover:text-red-500 disabled:opacity-30 transition"
+                >
+                  ✕
+                </button>
+              </div>
+            ))}
           </div>
-          <div>
-            <label className="label">旅伴 2 名稱</label>
-            <input type="text" value={s.person2Name}
-              onChange={e => update('person2Name', e.target.value)} className="input" />
+
+          {/* Add new person */}
+          <div className="flex gap-2">
+            <input
+              type="text"
+              value={newPerson}
+              onChange={e => setNewPerson(e.target.value)}
+              onKeyDown={e => { if (e.key === 'Enter') { e.preventDefault(); addPerson() } }}
+              placeholder="新增旅伴名稱"
+              className="input flex-1"
+            />
+            <button
+              type="button"
+              onClick={addPerson}
+              disabled={!newPerson.trim()}
+              className="shrink-0 rounded-xl bg-gray-100 px-4 py-2.5 text-sm font-semibold text-gray-600 hover:bg-gray-200 disabled:opacity-30 transition"
+            >
+              新增
+            </button>
           </div>
         </section>
 

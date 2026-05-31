@@ -26,7 +26,7 @@ export default function ExpenseForm({ initial, onSave, onCancel, saveLabel = '�
   const [amountJPY, setAmountJPY] = useState(initial?.amountJPY ? String(initial.amountJPY) : '')
   const [category, setCategory] = useState<Category>(initial?.category ?? '其他')
   const [paymentMethod, setPaymentMethod] = useState(initial?.paymentMethod ?? '現金')
-  const [paidBy, setPaidBy] = useState(settings.person1Name)
+  const [paidBy, setPaidBy] = useState(settings.people[0] ?? '')
   const [notes, setNotes] = useState('')
   const [items, setItems] = useState(initial?.items ?? [])
 
@@ -143,33 +143,24 @@ export default function ExpenseForm({ initial, onSave, onCancel, saveLabel = '�
       </div>
 
       {/* Payer */}
-      <div>
-        <label className="label">付款人</label>
-        <div className="flex gap-2 flex-wrap">
-          {settings.person1Name && (
-            <button key={settings.person1Name} type="button"
-              onClick={() => setPaidBy(settings.person1Name)}
-              className={`rounded-xl border-2 px-5 py-2.5 text-sm font-semibold transition-all ${
-                paidBy === settings.person1Name
-                  ? 'border-red-500 bg-red-50 text-red-700'
-                  : 'border-gray-100 bg-gray-50 text-gray-600 hover:border-gray-200'
-              }`}>
-              {settings.person1Name}
-            </button>
-          )}
-          {settings.person2Name && (
-            <button key={settings.person2Name} type="button"
-              onClick={() => setPaidBy(settings.person2Name)}
-              className={`rounded-xl border-2 px-5 py-2.5 text-sm font-semibold transition-all ${
-                paidBy === settings.person2Name
-                  ? 'border-red-500 bg-red-50 text-red-700'
-                  : 'border-gray-100 bg-gray-50 text-gray-600 hover:border-gray-200'
-              }`}>
-              {settings.person2Name}
-            </button>
-          )}
+      {settings.people.length > 0 && (
+        <div>
+          <label className="label">付款人</label>
+          <div className="flex gap-2 flex-wrap">
+            {settings.people.map(person => (
+              <button key={person} type="button"
+                onClick={() => setPaidBy(person)}
+                className={`rounded-xl border-2 px-5 py-2.5 text-sm font-semibold transition-all ${
+                  paidBy === person
+                    ? 'border-red-500 bg-red-50 text-red-700'
+                    : 'border-gray-100 bg-gray-50 text-gray-600 hover:border-gray-200'
+                }`}>
+                {person}
+              </button>
+            ))}
+          </div>
         </div>
-      </div>
+      )}
 
       {/* Notes */}
       <div>

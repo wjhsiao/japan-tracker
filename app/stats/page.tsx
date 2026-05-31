@@ -37,8 +37,10 @@ export default function StatsPage() {
 
   const maxDaily = Math.max(...dailyTotals.map(d => d.total), 1)
 
-  const p1Total = sumJPY(expenses.filter(e => e.paidBy === settings.person1Name))
-  const p2Total = sumJPY(expenses.filter(e => e.paidBy === settings.person2Name))
+  const personTotals = settings.people.map(name => ({
+    name,
+    total: sumJPY(expenses.filter(e => e.paidBy === name)),
+  }))
 
   return (
     <PageShell title="消費統計">
@@ -103,27 +105,29 @@ export default function StatsPage() {
           )}
 
           {/* Per person */}
-          <div className="rounded-2xl bg-white p-5 shadow-sm ring-1 ring-gray-100">
-            <h2 className="mb-4 text-sm font-semibold text-gray-700">個人消費</h2>
-            {[
-              { name: settings.person1Name, total: p1Total },
-              { name: settings.person2Name, total: p2Total },
-            ].map(({ name, total: pt }) => (
-              <div key={name} className="mb-3">
-                <div className="flex justify-between text-sm mb-1">
-                  <span className="font-medium text-gray-700">{name}</span>
-                  <span className="font-semibold text-gray-900">{formatJPY(pt)}</span>
+          {personTotals.length > 0 && (
+            <div className="rounded-2xl bg-white p-5 shadow-sm ring-1 ring-gray-100">
+              <h2 className="mb-4 text-sm font-semibold text-gray-700">個人消費</h2>
+              {personTotals.map(({ name, total: pt }) => (
+                <div key={name} className="mb-4 last:mb-0">
+                  <div className="flex justify-between text-sm mb-1">
+                    <span className="font-medium text-gray-700">{name}</span>
+                    <span className="font-semibold text-gray-900">{formatJPY(pt)}</span>
+                  </div>
+                  <div className="h-2.5 w-full rounded-full bg-gray-100 overflow-hidden">
+                    <div
+                      className="h-full rounded-full bg-red-400 transition-all duration-500"
+                      style={{ width: total > 0 ? `${(pt / total) * 100}%` : '0%' }}
+                    />
+                  </div>
+                  <p className="mt-1 text-xs text-gray-400">
+                    {formatTWD(pt, settings.exchangeRateJPYtoTWD)}
+                    　{total > 0 ? ((pt / total) * 100).toFixed(0) : 0}%
+                  </p>
                 </div>
-                <div className="h-2 w-full rounded-full bg-gray-100 overflow-hidden">
-                  <div
-                    className="h-full rounded-full bg-red-400"
-                    style={{ width: total > 0 ? `${(pt / total) * 100}%` : '0%' }}
-                  />
-                </div>
-                <p className="mt-0.5 text-xs text-gray-400">{formatTWD(pt, settings.exchangeRateJPYtoTWD)} · {total > 0 ? ((pt / total) * 100).toFixed(0) : 0}%</p>
-              </div>
-            ))}
-          </div>
+              ))}
+            </div>
+          )}
         </div>
       )}
     </PageShell>
