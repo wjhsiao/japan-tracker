@@ -14,12 +14,16 @@ interface Props {
   saveLabel?: string
   /** While true, disables the save button (OCR still loading) */
   disabled?: boolean
+  /** Autofocus the amount field (manual add flow) */
+  autoFocusAmount?: boolean
 }
 
-export default function ExpenseForm({ initial, onSave, onCancel, saveLabel = '儲存', disabled = false }: Props) {
+export default function ExpenseForm({ initial, onSave, onCancel, saveLabel = '儲存', disabled = false, autoFocusAmount = false }: Props) {
   const settings = loadSettings()
   const [saving, setSaving] = useState(false)
   const [error, setError] = useState('')
+  // Expand the optional 日文店名 / 備註 section if either already has content
+  const [showMore, setShowMore] = useState(!!(initial?.storeNameJa || initial?.notes))
 
   const [date, setDate] = useState(initial?.date ?? today())
   const [storeName, setStoreName] = useState(initial?.storeName ?? '')
@@ -43,6 +47,7 @@ export default function ExpenseForm({ initial, onSave, onCancel, saveLabel = '�
     if (initial.items) setItems(initial.items)
     if (initial.paidBy) setPaidBy(initial.paidBy)
     if (initial.notes) setNotes(initial.notes)
+    if (initial.storeNameJa || initial.notes) setShowMore(true)
   }, [initial])
 
   async function handleSubmit(e: React.FormEvent) {
@@ -92,22 +97,18 @@ export default function ExpenseForm({ initial, onSave, onCancel, saveLabel = '�
           <div className="relative">
             <span className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400 font-semibold">¥</span>
             <input type="number" inputMode="numeric" min="1" value={amountJPY}
+              autoFocus={autoFocusAmount}
               onChange={e => setAmountJPY(e.target.value)}
-              placeholder="0" className="input pl-7" required />
+              placeholder="0" className="input pl-7 text-lg font-semibold" required />
           </div>
         </div>
       </div>
 
       {/* Store name */}
       <div>
-        <label className="label">店名（中文）</label>
+        <label className="label">店名</label>
         <input type="text" value={storeName} onChange={e => setStoreName(e.target.value)}
           placeholder="e.g. 一蘭拉麵" className="input" />
-      </div>
-      <div>
-        <label className="label">店名（日文）<span className="text-gray-400 font-normal text-xs ml-1">選填</span></label>
-        <input type="text" value={storeNameJa} onChange={e => setStoreNameJa(e.target.value)}
-          placeholder="e.g. 一蘭ラーメン" className="input" />
       </div>
 
       {/* Category */}
@@ -118,7 +119,7 @@ export default function ExpenseForm({ initial, onSave, onCancel, saveLabel = '�
             <button key={cat.value} type="button" onClick={() => setCategory(cat.value)}
               className={`rounded-xl border-2 py-2 text-xs font-medium transition-all ${
                 category === cat.value
-                  ? 'border-red-500 bg-red-50 text-red-700'
+                  ? cat.color
                   : 'border-gray-100 bg-gray-50 text-gray-600 hover:border-gray-200'
               }`}>
               <div className="text-lg">{cat.emoji}</div>
@@ -165,13 +166,27 @@ export default function ExpenseForm({ initial, onSave, onCancel, saveLabel = '�
         </div>
       )}
 
-      {/* Notes */}
-      <div>
-        <label className="label">備註<span className="text-gray-400 font-normal text-xs ml-1">選填</span></label>
-        <textarea value={notes} onChange={e => setNotes(e.target.value)}
-          placeholder="其他備註..." rows={2}
-          className="input resize-none" />
-      </div>
+      {/* More (optional) — 日文店名 + 備註 */}
+      {showMore ? (
+        <div className="space-y-4">
+          <div>
+            <label className="label">店名（日文）<span className="text-gray-400 font-normal text-xs ml-1">選填</span></label>
+            <input type="text" value={storeNameJa} onChange={e => setStoreNameJa(e.target.value)}
+              placeholder="e.g. 一蘭ラーメン" className="input" />
+          </div>
+          <div>
+            <label className="label">備註<span className="text-gray-400 font-normal text-xs ml-1">選填</span></label>
+            <textarea value={notes} onChange={e => setNotes(e.target.value)}
+              placeholder="其他備註..." rows={2}
+              className="input resize-none" />
+          </div>
+        </div>
+      ) : (
+        <button type="button" onClick={() => setShowMore(true)}
+          className="text-sm font-medium text-gray-400 hover:text-gray-600 transition">
+          + 更多（日文店名、備註）
+        </button>
+      )}
 
       {/* Items preview */}
       {items.length > 0 && (
