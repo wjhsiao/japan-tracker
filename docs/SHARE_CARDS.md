@@ -67,6 +67,10 @@ IG / Threads / LINE 的圖片。屬於「回憶 / 社群分享」模組，與記
 - emoji 跨裝置渲染不一致。
 - Web Share API 對 file 分享需做能力偵測 + 下載 fallback。
 
-## 待你拍板
-- MVP 兩主題是否就採 RECURRENT_FEED + NEWSPAPER_CLIP？（可換）
-- 分享入口放 Dashboard、歷史頁、或兩者皆放？
+## 定案（2026-06）
+- ✅ MVP 兩主題：**RECURRENT_FEED + NEWSPAPER_CLIP**
+- ✅ 分享入口：**兩者皆放**
+  - Dashboard「今日花費」卡片旁 → 「分享今天」（傳入今天日期）
+  - 歷史頁每日標題列 → 「分享」（傳入該日日期）
+  - 兩入口共用同一分享流程，差別僅在傳入的 `date`
+- ✅ 金句：手動輸入為預設，「✨ 幫我想金句」走 Gemini，失敗退回手動
