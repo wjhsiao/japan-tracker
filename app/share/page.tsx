@@ -13,6 +13,12 @@ import { today } from '@/lib/utils'
 const THEMES: { value: ShareTheme; label: string }[] = [
   { value: 'RECURRENT_FEED', label: 'IG 限動' },
   { value: 'NEWSPAPER_CLIP', label: '號外報紙' },
+  { value: 'RETRO_ANIME', label: '復古動漫' },
+  { value: 'RETRO_POSTCARD', label: '明信片' },
+  { value: 'MAGAZINE', label: '雜誌封面' },
+  { value: 'TICKET', label: '車票' },
+  { value: 'GAME', label: '電玩' },
+  { value: 'POLAROID', label: '拍立得' },
 ]
 
 function ShareInner() {
@@ -114,10 +120,10 @@ function ShareInner() {
       {/* Theme selector */}
       <div>
         <label className="label">主題風格</label>
-        <div className="flex gap-2">
+        <div className="grid grid-cols-4 gap-2">
           {THEMES.map(t => (
             <button key={t.value} type="button" onClick={() => setTheme(t.value)}
-              className={`flex-1 rounded-xl border-2 py-2.5 text-sm font-semibold transition-all ${
+              className={`rounded-xl border-2 py-2 text-xs font-semibold transition-all ${
                 theme === t.value
                   ? 'border-red-500 bg-red-50 text-red-700'
                   : 'border-gray-100 bg-gray-50 text-gray-600'

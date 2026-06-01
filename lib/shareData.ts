@@ -1,7 +1,15 @@
 import { Expense, Settings } from './types'
 import { sumJPY } from './utils'
 
-export type ShareTheme = 'RECURRENT_FEED' | 'NEWSPAPER_CLIP'
+export type ShareTheme =
+  | 'RECURRENT_FEED'
+  | 'NEWSPAPER_CLIP'
+  | 'RETRO_ANIME'
+  | 'RETRO_POSTCARD'
+  | 'MAGAZINE'
+  | 'TICKET'
+  | 'GAME'
+  | 'POLAROID'
 
 export interface ShareData {
   date: string

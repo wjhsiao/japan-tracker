@@ -8,7 +8,7 @@ import ExpenseForm from '../components/expenses/ExpenseForm'
 import { Expense, Category } from '@/lib/types'
 import { deleteExpense, updateExpense } from '@/lib/gas'
 import { useExpenses, invalidateExpensesCache } from '@/lib/useExpenses'
-import { loadSettings } from '@/lib/settings'
+import { loadSettings, getActiveTrip, expensesInTrip } from '@/lib/settings'
 import { formatJPY, formatTWD, formatDate, groupByDate, sumJPY } from '@/lib/utils'
 
 export default function HistoryPage() {
@@ -17,6 +17,7 @@ export default function HistoryPage() {
   const [filterCat, setFilterCat] = useState<Category | 'all'>('all')
   const [filterPerson, setFilterPerson] = useState<string | 'all'>('all')
   const settings = loadSettings()
+  const trip = getActiveTrip(settings)
 
   async function handleDelete(id: string) {
     if (!confirm('確定刪除這筆消費？')) return
@@ -32,13 +33,14 @@ export default function HistoryPage() {
     setEditing(null)
   }
 
-  const filtered = expenses
+  const tripExpenses = expensesInTrip(expenses, trip)
+  const filtered = tripExpenses
     .filter(e => filterCat === 'all' || e.category === filterCat)
     .filter(e => filterPerson === 'all' || e.paidBy === filterPerson)
 
   const grouped = groupByDate(filtered)
-  const categories = Array.from(new Set(expenses.map(e => e.category)))
-  const people = Array.from(new Set(expenses.map(e => e.paidBy).filter(Boolean)))
+  const categories = Array.from(new Set(tripExpenses.map(e => e.category)))
+  const people = Array.from(new Set(tripExpenses.map(e => e.paidBy).filter(Boolean)))
 
   if (editing) {
     return (

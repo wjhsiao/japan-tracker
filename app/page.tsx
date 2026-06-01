@@ -5,7 +5,7 @@ import Link from 'next/link'
 import PageShell from './components/layout/PageShell'
 import CategoryBadge from './components/expenses/CategoryBadge'
 import { Settings } from '@/lib/types'
-import { loadSettings } from '@/lib/settings'
+import { loadSettings, saveSettings, getActiveTrip, expensesInTrip } from '@/lib/settings'
 import { useExpenses } from '@/lib/useExpenses'
 import { formatJPY, formatTWD, formatDate, sumJPY, today, daysBetween } from '@/lib/utils'
 
@@ -28,22 +28,31 @@ export default function Dashboard() {
 
   if (!settings) return null
 
+  const trip = getActiveTrip(settings)
+  const tripExpenses = expensesInTrip(expenses, trip)
+
   const todayStr = today()
-  const todayExpenses = expenses.filter(e => e.date === todayStr)
+  const todayExpenses = tripExpenses.filter(e => e.date === todayStr)
   const todayTotal = sumJPY(todayExpenses)
-  const tripTotal = sumJPY(expenses)
-  const remaining = settings.budgetJPY - tripTotal
-  const pct = Math.min((tripTotal / settings.budgetJPY) * 100, 100)
+  const tripTotal = sumJPY(tripExpenses)
+  const remaining = trip.budgetJPY - tripTotal
+  const pct = trip.budgetJPY > 0 ? Math.min((tripTotal / trip.budgetJPY) * 100, 100) : 0
   const overBudget = remaining < 0
 
-  const elapsed = Math.max(0, daysBetween(settings.startDate, todayStr)) + 1
-  const daysLeft = Math.max(0, settings.tripDays - elapsed)
+  const elapsed = Math.min(Math.max(daysBetween(trip.startDate, todayStr) + 1, 1), trip.tripDays)
+  const daysLeft = Math.max(0, trip.tripDays - elapsed)
   const dailyAvg = elapsed > 0 ? tripTotal / elapsed : 0
   const dailyBudget = daysLeft > 0 ? remaining / daysLeft : 0
 
-  const recent = [...expenses]
+  const recent = [...tripExpenses]
     .sort((a, b) => b.createdAt.localeCompare(a.createdAt))
     .slice(0, 5)
+
+  function switchTrip(id: string) {
+    const next = { ...settings!, activeTripId: id }
+    setSettings(next)
+    saveSettings(next)
+  }
 
   return (
     <PageShell
@@ -62,6 +71,24 @@ export default function Dashboard() {
         </div>
       )}
       <div className="space-y-4 px-4">
+        {/* Trip switcher */}
+        {settings.trips.length > 1 ? (
+          <div className="flex gap-2 overflow-x-auto scrollbar-hide -mx-1 px-1">
+            {settings.trips.map(t => (
+              <button key={t.id} onClick={() => switchTrip(t.id)}
+                className={`shrink-0 rounded-full border px-3 py-1 text-xs font-medium transition ${
+                  t.id === trip.id
+                    ? 'border-red-500 bg-red-50 text-red-700'
+                    : 'border-gray-200 bg-white text-gray-500'
+                }`}>
+                {t.name}
+              </button>
+            ))}
+          </div>
+        ) : (
+          <p className="text-xs font-medium text-gray-400">{trip.name}</p>
+        )}
+
         {/* Today */}
         <div className="rounded-2xl bg-white p-5 shadow-sm ring-1 ring-gray-100">
           <div className="flex items-start justify-between">
@@ -88,7 +115,7 @@ export default function Dashboard() {
             </div>
             <div className="text-right">
               <p className="text-sm font-medium text-gray-500">預算</p>
-              <p className="text-lg font-semibold text-gray-700">{formatJPY(settings.budgetJPY)}</p>
+              <p className="text-lg font-semibold text-gray-700">{formatJPY(trip.budgetJPY)}</p>
             </div>
           </div>
           <div className="mt-3">

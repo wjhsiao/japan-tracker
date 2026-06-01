@@ -52,16 +52,26 @@ export interface OcrResult {
   date: string
 }
 
-export interface Settings {
-  budgetJPY: number
-  tripDays: number
+export interface Trip {
+  id: string
+  name: string
   startDate: string
+  tripDays: number
+  budgetJPY: number
+}
+
+export interface Settings {
   exchangeRateJPYtoTWD: number
   /** List of payers (replaces person1Name / person2Name) */
   people: string[]
   /** Access code typed by user; sent as x-access-code header to protected APIs */
   accessCode: string
+  /** Trips, each defined by a date range — expenses are grouped by which trip's range their date falls in */
+  trips: Trip[]
+  activeTripId: string
 }
+
+export const DEFAULT_TRIP_ID = 'trip-default'
 
 // Categories ordered by frequency of use
 export const CATEGORIES: { value: Category; emoji: string; color: string }[] = [
@@ -88,10 +98,11 @@ export const PAYMENT_COLORS: Record<PaymentMethod, string> = {
 }
 
 export const DEFAULT_SETTINGS: Settings = {
-  budgetJPY: 150000,
-  tripDays: 7,
-  startDate: new Date().toISOString().slice(0, 10),
   exchangeRateJPYtoTWD: 0.22,
   people: ['Person 1', 'Person 2'],
   accessCode: '',
+  trips: [
+    { id: DEFAULT_TRIP_ID, name: '我的旅程', startDate: new Date().toISOString().slice(0, 10), tripDays: 7, budgetJPY: 150000 },
+  ],
+  activeTripId: DEFAULT_TRIP_ID,
 }
