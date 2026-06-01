@@ -4,12 +4,14 @@ import PageShell from '../components/layout/PageShell'
 import PieChart, { COLORS } from '../components/ui/PieChart'
 import { CATEGORIES, PAYMENT_METHODS } from '@/lib/types'
 import { useExpenses } from '@/lib/useExpenses'
-import { loadSettings } from '@/lib/settings'
+import { loadSettings, getActiveTrip, expensesInTrip } from '@/lib/settings'
 import { formatJPY, formatTWD, sumJPY, groupByDate } from '@/lib/utils'
 
 export default function StatsPage() {
-  const { expenses, loading, error, refresh } = useExpenses()
+  const { expenses: allExpenses, loading, error, refresh } = useExpenses()
   const settings = loadSettings()
+  const trip = getActiveTrip(settings)
+  const expenses = expensesInTrip(allExpenses, trip)
 
   const total = sumJPY(expenses)
 

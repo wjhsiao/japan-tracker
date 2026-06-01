@@ -1,6 +1,7 @@
 'use client'
 
-import { Settings, DEFAULT_SETTINGS } from './types'
+import { Settings, Trip, DEFAULT_SETTINGS, DEFAULT_TRIP_ID } from './types'
+import { daysBetween } from './utils'
 
 const KEY = 'japan-tracker:settings'
 
@@ -11,11 +12,24 @@ export function loadSettings(): Settings {
 
     // Migrate old person1Name / person2Name to people[]
     if (!raw.people && (raw.person1Name || raw.person2Name)) {
-      const p1 = raw.person1Name || ''
-      const p2 = raw.person2Name || ''
-      raw.people = [p1, p2].filter(Boolean)
+      raw.people = [raw.person1Name || '', raw.person2Name || ''].filter(Boolean)
       delete raw.person1Name
       delete raw.person2Name
+    }
+
+    // Migrate old flat trip fields (budgetJPY / tripDays / startDate) → trips[]
+    if (!raw.trips) {
+      raw.trips = [{
+        id: DEFAULT_TRIP_ID,
+        name: '我的旅程',
+        startDate: raw.startDate ?? DEFAULT_SETTINGS.trips[0].startDate,
+        tripDays: raw.tripDays ?? 7,
+        budgetJPY: raw.budgetJPY ?? 150000,
+      }]
+      raw.activeTripId = DEFAULT_TRIP_ID
+      delete raw.startDate
+      delete raw.tripDays
+      delete raw.budgetJPY
     }
 
     return { ...DEFAULT_SETTINGS, ...raw }
@@ -26,4 +40,34 @@ export function loadSettings(): Settings {
 
 export function saveSettings(s: Settings): void {
   localStorage.setItem(KEY, JSON.stringify(s))
+}
+
+/* ── Trip helpers ─────────────────────────────────────────── */
+
+export function getActiveTrip(s: Settings): Trip {
+  return s.trips.find(t => t.id === s.activeTripId) ?? s.trips[0]
+}
+
+/** Inclusive end date (YYYY-MM-DD) of a trip. */
+export function tripEndDate(t: Trip): string {
+  const d = new Date(t.startDate + 'T00:00:00')
+  d.setDate(d.getDate() + Math.max(0, t.tripDays - 1))
+  return d.toISOString().slice(0, 10)
+}
+
+/** Is a given date within the trip's inclusive range? */
+export function isInTrip(date: string, t: Trip): boolean {
+  const d = date.slice(0, 10)
+  return d >= t.startDate && d <= tripEndDate(t)
+}
+
+/** Filter expenses to a trip's date range. */
+export function expensesInTrip<T extends { date: string }>(items: T[], t: Trip): T[] {
+  return items.filter(e => isInTrip(e.date, t))
+}
+
+/** Which day-number (1-based) of the trip a date falls on; clamped to [1, tripDays]. */
+export function tripDayNumber(date: string, t: Trip): number {
+  const n = daysBetween(t.startDate, date.slice(0, 10)) + 1
+  return Math.min(Math.max(n, 1), t.tripDays)
 }
