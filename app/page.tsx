@@ -64,7 +64,15 @@ export default function Dashboard() {
       <div className="space-y-4 px-4">
         {/* Today */}
         <div className="rounded-2xl bg-white p-5 shadow-sm ring-1 ring-gray-100">
-          <p className="text-sm font-medium text-gray-500">今日花費</p>
+          <div className="flex items-start justify-between">
+            <p className="text-sm font-medium text-gray-500">今日花費</p>
+            {todayExpenses.length > 0 && (
+              <Link href={`/share?date=${todayStr}`}
+                className="rounded-full bg-gray-100 px-3 py-1 text-xs font-medium text-gray-600 hover:bg-gray-200 transition">
+                📤 分享今天
+              </Link>
+            )}
+          </div>
           <p className="mt-1 text-4xl font-bold text-gray-900">{formatJPY(todayTotal)}</p>
           <p className="mt-0.5 text-sm text-gray-400">{formatTWD(todayTotal, settings.exchangeRateJPYtoTWD)}</p>
           <p className="mt-2 text-xs text-gray-400">{todayExpenses.length} 筆消費 · {formatDate(todayStr)}</p>

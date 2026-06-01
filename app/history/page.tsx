@@ -1,6 +1,7 @@
 'use client'
 
 import { useState } from 'react'
+import Link from 'next/link'
 import PageShell from '../components/layout/PageShell'
 import CategoryBadge from '../components/expenses/CategoryBadge'
 import ExpenseForm from '../components/expenses/ExpenseForm'
@@ -103,7 +104,13 @@ export default function HistoryPage() {
             <section key={date}>
               <div className="mb-2 flex items-center justify-between">
                 <p className="text-xs font-semibold text-gray-500">{formatDate(date)}</p>
-                <p className="text-xs font-semibold text-gray-700">{formatJPY(sumJPY(dayExp))}</p>
+                <div className="flex items-center gap-3">
+                  <p className="text-xs font-semibold text-gray-700">{formatJPY(sumJPY(dayExp))}</p>
+                  <Link href={`/share?date=${date}`}
+                    className="text-xs font-medium text-red-600 hover:text-red-700">
+                    📤 分享
+                  </Link>
+                </div>
               </div>
               <div className="overflow-hidden rounded-2xl bg-white shadow-sm ring-1 ring-gray-100 divide-y divide-gray-50">
                 {dayExp.map(e => (
