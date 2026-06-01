@@ -64,7 +64,11 @@ function ShareInner() {
     if (!cardRef.current || !photoUrl) return
     setExporting(true)
     try {
-      const dataUrl = await toPng(cardRef.current, { pixelRatio: 2, cacheBust: true })
+      const opts = { pixelRatio: 2, cacheBust: true }
+      // Warm-up pass: html-to-image often produces a blank/partial image on the
+      // first call before fonts & the photo are fully decoded.
+      await toPng(cardRef.current, opts)
+      const dataUrl = await toPng(cardRef.current, opts)
       const blob = await (await fetch(dataUrl)).blob()
       const file = new File([blob], `japan-${date}.png`, { type: 'image/png' })
 
@@ -80,7 +84,8 @@ function ShareInner() {
     } catch (err) {
       // user cancelling share throws AbortError — ignore that
       if (!(err instanceof Error && err.name === 'AbortError')) {
-        alert('輸出失敗，請再試一次')
+        const msg = err instanceof Error ? `${err.name}: ${err.message}` : String(err)
+        alert('輸出失敗：' + msg)
       }
     } finally {
       setExporting(false)
