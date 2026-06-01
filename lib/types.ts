@@ -1,3 +1,5 @@
+import { today } from './utils'
+
 export type Category =
   | '餐飲'
   | '交通'
@@ -102,7 +104,7 @@ export const DEFAULT_SETTINGS: Settings = {
   people: ['Person 1', 'Person 2'],
   accessCode: '',
   trips: [
-    { id: DEFAULT_TRIP_ID, name: '我的旅程', startDate: new Date().toISOString().slice(0, 10), tripDays: 7, budgetJPY: 150000 },
+    { id: DEFAULT_TRIP_ID, name: '我的旅程', startDate: today(), tripDays: 7, budgetJPY: 150000 },
   ],
   activeTripId: DEFAULT_TRIP_ID,
 }
