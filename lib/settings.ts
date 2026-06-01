@@ -1,7 +1,7 @@
 'use client'
 
 import { Settings, Trip, DEFAULT_SETTINGS, DEFAULT_TRIP_ID } from './types'
-import { daysBetween } from './utils'
+import { localDate } from './utils'
 
 const KEY = 'japan-tracker:settings'
 
@@ -45,14 +45,14 @@ export function saveSettings(s: Settings): void {
 /* ── Trip helpers ─────────────────────────────────────────── */
 
 export function getActiveTrip(s: Settings): Trip {
-  return s.trips.find(t => t.id === s.activeTripId) ?? s.trips[0]
+  return s.trips.find(t => t.id === s.activeTripId) ?? s.trips[0] ?? DEFAULT_SETTINGS.trips[0]
 }
 
-/** Inclusive end date (YYYY-MM-DD) of a trip. */
+/** Inclusive end date (YYYY-MM-DD) of a trip. Uses local date math (no UTC shift). */
 export function tripEndDate(t: Trip): string {
   const d = new Date(t.startDate + 'T00:00:00')
   d.setDate(d.getDate() + Math.max(0, t.tripDays - 1))
-  return d.toISOString().slice(0, 10)
+  return localDate(d)
 }
 
 /** Is a given date within the trip's inclusive range? */
@@ -64,10 +64,4 @@ export function isInTrip(date: string, t: Trip): boolean {
 /** Filter expenses to a trip's date range. */
 export function expensesInTrip<T extends { date: string }>(items: T[], t: Trip): T[] {
   return items.filter(e => isInTrip(e.date, t))
-}
-
-/** Which day-number (1-based) of the trip a date falls on; clamped to [1, tripDays]. */
-export function tripDayNumber(date: string, t: Trip): number {
-  const n = daysBetween(t.startDate, date.slice(0, 10)) + 1
-  return Math.min(Math.max(n, 1), t.tripDays)
 }
