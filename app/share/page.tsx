@@ -8,7 +8,7 @@ import ShareCard from '../components/share/ShareCard'
 import { useExpenses } from '@/lib/useExpenses'
 import { loadSettings } from '@/lib/settings'
 import { buildShareData, ShareTheme } from '@/lib/shareData'
-import { today } from '@/lib/utils'
+import { today, compressImage } from '@/lib/utils'
 
 const THEMES: { value: ShareTheme; label: string }[] = [
   { value: 'RECURRENT_FEED', label: 'IG 限動' },
@@ -49,9 +49,15 @@ function ShareInner() {
     [expenses, date, settings]
   )
 
-  function pickPhoto(file: File) {
-    if (photoUrl) URL.revokeObjectURL(photoUrl)
-    setPhotoUrl(URL.createObjectURL(file))
+  async function pickPhoto(file: File) {
+    // Downscale to a data URL: keeps export memory low (camera photos are huge)
+    // and inlines the image so html-to-image can embed it reliably.
+    try {
+      const { base64, mimeType } = await compressImage(file, 1280, 0.85)
+      setPhotoUrl(`data:${mimeType};base64,${base64}`)
+    } catch {
+      setPhotoUrl(URL.createObjectURL(file))
+    }
   }
 
   function suggestCaption() {
@@ -64,11 +70,9 @@ function ShareInner() {
     if (!cardRef.current || !photoUrl) return
     setExporting(true)
     try {
-      const opts = { pixelRatio: 2, cacheBust: true }
-      // Warm-up pass: html-to-image often produces a blank/partial image on the
-      // first call before fonts & the photo are fully decoded.
-      await toPng(cardRef.current, opts)
-      const dataUrl = await toPng(cardRef.current, opts)
+      // Wait for fonts so text isn't dropped on the first render
+      if (document.fonts?.ready) await document.fonts.ready
+      const dataUrl = await toPng(cardRef.current, { pixelRatio: 2, cacheBust: true })
       const blob = await (await fetch(dataUrl)).blob()
       const file = new File([blob], `japan-${date}.png`, { type: 'image/png' })
 

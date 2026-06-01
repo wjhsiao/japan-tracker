@@ -1,36 +1,31 @@
-const CACHE = 'japan-tracker-v2'
-const PRECACHE = ['/', '/add', '/history', '/stats', '/settings']
+// Minimal service worker — present for PWA installability, but network-first
+// so deploys are never served stale. (No offline mode by design.)
+const CACHE = 'japan-tracker-v3'
+const OFFLINE_FALLBACK = '/'
 
 self.addEventListener('install', (e) => {
-  e.waitUntil(
-    caches.open(CACHE)
-      .then(c => c.addAll(PRECACHE))
-      .catch(() => {})
-  )
+  e.waitUntil(caches.open(CACHE).then(c => c.add(OFFLINE_FALLBACK)).catch(() => {}))
   self.skipWaiting()
 })
 
 self.addEventListener('activate', (e) => {
   e.waitUntil(
-    caches.keys().then(keys =>
-      Promise.all(keys.filter(k => k !== CACHE).map(k => caches.delete(k)))
-    )
+    caches.keys()
+      .then(keys => Promise.all(keys.filter(k => k !== CACHE).map(k => caches.delete(k))))
+      .then(() => self.clients.claim())
   )
-  self.clients.claim()
 })
 
 self.addEventListener('fetch', (e) => {
   if (e.request.method !== 'GET') return
-  // Don't cache API calls
   if (e.request.url.includes('/api/')) return
 
+  // Network-first: always prefer fresh content; only fall back to the cached
+  // shell for navigations when offline.
   e.respondWith(
-    fetch(e.request)
-      .then(res => {
-        const clone = res.clone()
-        caches.open(CACHE).then(c => c.put(e.request, clone))
-        return res
-      })
-      .catch(() => caches.match(e.request).then(cached => cached ?? new Response('Offline', { status: 503 })))
+    fetch(e.request).catch(() => {
+      if (e.request.mode === 'navigate') return caches.match(OFFLINE_FALLBACK)
+      return caches.match(e.request)
+    })
   )
 })
