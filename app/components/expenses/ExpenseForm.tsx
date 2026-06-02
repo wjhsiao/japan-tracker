@@ -7,8 +7,9 @@ import { loadSettings } from '@/lib/settings'
 import { today } from '@/lib/utils'
 
 interface Props {
-  // Covers both OCR results (new scan) and existing Expense edits (paidBy/notes)
-  initial?: Partial<OcrResult> & { paidBy?: string; notes?: string }
+  // Covers both OCR results (new scan) and existing Expense edits.
+  // id/createdAt present ⇒ editing an existing row (must be preserved, not regenerated).
+  initial?: Partial<OcrResult> & { id?: string; paidBy?: string; notes?: string; createdAt?: string }
   onSave: (expense: Expense) => Promise<void>
   onCancel: () => void
   saveLabel?: string
@@ -59,7 +60,8 @@ export default function ExpenseForm({ initial, onSave, onCancel, saveLabel = '�
     setError('')
     try {
       await onSave({
-        id: uuidv4(),
+        // Preserve identity when editing; only mint a new id/createdAt for new entries
+        id: initial?.id ?? uuidv4(),
         date,
         storeName: storeName || '未知店家',
         storeNameJa,
@@ -69,7 +71,7 @@ export default function ExpenseForm({ initial, onSave, onCancel, saveLabel = '�
         paymentMethod,
         paidBy,
         notes,
-        createdAt: new Date().toISOString(),
+        createdAt: initial?.createdAt ?? new Date().toISOString(),
       })
     } catch (err) {
       setError(String(err))
