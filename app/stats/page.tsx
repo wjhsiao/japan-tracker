@@ -1,5 +1,6 @@
 'use client'
 
+import Link from 'next/link'
 import PageShell from '../components/layout/PageShell'
 import PieChart, { COLORS } from '../components/ui/PieChart'
 import { CATEGORIES, PAYMENT_METHODS } from '@/lib/types'
@@ -66,6 +67,16 @@ export default function StatsPage() {
         </div>
       ) : (
         <div className="space-y-4 px-4">
+          {/* Trip recap CTA */}
+          <Link href="/recap"
+            className="flex items-center justify-between rounded-2xl bg-gradient-to-r from-red-600 to-rose-600 p-4 text-white shadow-sm transition active:scale-95">
+            <div>
+              <p className="font-semibold">📤 製作旅程回顧卡</p>
+              <p className="text-xs text-red-100">把這趟花費變成可分享的回顧</p>
+            </div>
+            <span className="text-xl">›</span>
+          </Link>
+
           {/* Summary */}
           <div className="grid grid-cols-2 gap-3">
             <div className="rounded-2xl bg-white p-4 shadow-sm ring-1 ring-gray-100">

@@ -2,7 +2,7 @@
 
 import { Suspense, useEffect, useMemo, useRef, useState } from 'react'
 import { useSearchParams } from 'next/navigation'
-import { toPng } from 'html-to-image'
+import { exportCard } from '@/lib/shareExport'
 import PageShell from '../components/layout/PageShell'
 import ShareCard from '../components/share/ShareCard'
 import { useExpenses } from '@/lib/useExpenses'
@@ -45,8 +45,34 @@ function ShareInner() {
   const [weatherCond, setWeatherCond] = useState('☀️')
   const [weatherTemp, setWeatherTemp] = useState('')
 
-  // Note: intentionally NOT auto-filling a real payer name here — the card is
-  // shared publicly, so the character is an optional alias (代稱), default blank.
+  // Restore stable preferences (theme + info toggles + alias). NOT the caption,
+  // weather text or photo — those are per-occasion. No real name is auto-filled.
+  useEffect(() => {
+    try {
+      const p = JSON.parse(localStorage.getItem('japan-tracker:share-prefs') ?? '{}')
+      if (p.theme) setTheme(p.theme)
+      if (p.fields) setFields(f => ({ ...f, ...p.fields }))
+      if (typeof p.weatherOn === 'boolean') setWeatherOn(p.weatherOn)
+      if (typeof p.mainCharacter === 'string') setMainCharacter(p.mainCharacter)
+    } catch {}
+  }, [])
+
+  // Persist those preferences when they change
+  useEffect(() => {
+    try {
+      localStorage.setItem('japan-tracker:share-prefs', JSON.stringify({
+        theme,
+        fields: {
+          showAmount: fields.showAmount,
+          showDayNumber: fields.showDayNumber,
+          showLocation: fields.showLocation,
+          showCount: fields.showCount,
+        },
+        weatherOn,
+        mainCharacter,
+      }))
+    } catch {}
+  }, [theme, fields, weatherOn, mainCharacter])
 
   // Day-number within the active trip (0 if date is outside the trip)
   const dayNumber = useMemo(() => {
@@ -93,21 +119,7 @@ function ShareInner() {
     if (!cardRef.current || !photoUrl) return
     setExporting(true)
     try {
-      // Wait for fonts so text isn't dropped on the first render
-      if (document.fonts?.ready) await document.fonts.ready
-      const dataUrl = await toPng(cardRef.current, { pixelRatio: 2, cacheBust: true })
-      const blob = await (await fetch(dataUrl)).blob()
-      const file = new File([blob], `japan-${date}.png`, { type: 'image/png' })
-
-      const navAny = navigator as Navigator & { canShare?: (d?: ShareData) => boolean }
-      if (navAny.canShare && navAny.canShare({ files: [file] } as ShareData)) {
-        await navigator.share({ files: [file], title: '日本旅遊消費' })
-      } else {
-        const a = document.createElement('a')
-        a.href = dataUrl
-        a.download = file.name
-        a.click()
-      }
+      await exportCard(cardRef.current, `japan-${date}.png`)
     } catch (err) {
       // user cancelling share throws AbortError — ignore that
       if (!(err instanceof Error && err.name === 'AbortError')) {
