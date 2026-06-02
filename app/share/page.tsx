@@ -6,9 +6,11 @@ import { toPng } from 'html-to-image'
 import PageShell from '../components/layout/PageShell'
 import ShareCard from '../components/share/ShareCard'
 import { useExpenses } from '@/lib/useExpenses'
-import { loadSettings } from '@/lib/settings'
-import { buildShareData, ShareTheme } from '@/lib/shareData'
-import { today, compressImage } from '@/lib/utils'
+import { loadSettings, getActiveTrip, isInTrip } from '@/lib/settings'
+import { buildShareData, ShareTheme, ShareFields, DEFAULT_SHARE_FIELDS } from '@/lib/shareData'
+import { today, compressImage, daysBetween } from '@/lib/utils'
+
+const WEATHERS = ['☀️', '⛅', '☁️', '🌧️', '⛈️', '❄️', '🌫️']
 
 const THEMES: { value: ShareTheme; label: string }[] = [
   { value: 'RECURRENT_FEED', label: 'IG 限動' },
@@ -37,9 +39,31 @@ function ShareInner() {
   const [exporting, setExporting] = useState(false)
   const [aiNote, setAiNote] = useState('')
 
+  // Optional info toggles + weather (select emoji + free text)
+  const [fields, setFields] = useState<ShareFields>(DEFAULT_SHARE_FIELDS)
+  const [weatherOn, setWeatherOn] = useState(false)
+  const [weatherCond, setWeatherCond] = useState('☀️')
+  const [weatherTemp, setWeatherTemp] = useState('')
+
   useEffect(() => {
     setMainCharacter(loadSettings().people[0] ?? '')
   }, [])
+
+  // Day-number within the active trip (0 if date is outside the trip)
+  const dayNumber = useMemo(() => {
+    const trip = getActiveTrip(settings)
+    return isInTrip(date, trip) ? daysBetween(trip.startDate, date) + 1 : 0
+  }, [settings, date])
+
+  // Compose the weather string and merge into fields
+  const effectiveFields: ShareFields = {
+    ...fields,
+    weather: weatherOn ? `${weatherCond} ${weatherTemp}`.trim() : '',
+  }
+
+  function toggleField(k: keyof ShareFields) {
+    setFields(prev => ({ ...prev, [k]: !prev[k] }))
+  }
 
   // Revoke object URLs to avoid leaks
   useEffect(() => () => { if (photoUrl) URL.revokeObjectURL(photoUrl) }, [photoUrl])
@@ -104,6 +128,8 @@ function ShareInner() {
         theme={theme}
         photoUrl={photoUrl}
         data={data}
+        fields={effectiveFields}
+        dayNumber={dayNumber}
         location={location}
         mainCharacter={mainCharacter}
         goldSentence={goldSentence}
@@ -143,12 +169,62 @@ function ShareInner() {
         </div>
       </div>
 
-      {/* Fields */}
+      {/* Info toggles */}
       <div>
-        <label className="label">地點標籤</label>
-        <input value={location} onChange={e => setLocation(e.target.value)}
-          placeholder="日本 / 岡山 · 廣島" className="input" />
+        <label className="label">顯示資訊<span className="ml-1 text-xs font-normal text-gray-400">金句為主角，其餘可選</span></label>
+        <div className="flex flex-wrap gap-2">
+          {([
+            ['showAmount', '💴 金額'],
+            ['showDayNumber', '📅 第幾天'],
+            ['showLocation', '📍 地點'],
+            ['showCount', '🧾 筆數'],
+          ] as [keyof ShareFields, string][]).map(([k, label]) => (
+            <button key={k} type="button" onClick={() => toggleField(k)}
+              className={`rounded-full border px-3 py-1.5 text-xs font-medium transition ${
+                fields[k] ? 'border-red-500 bg-red-50 text-red-700' : 'border-gray-200 bg-white text-gray-500'
+              }`}>
+              {label}
+            </button>
+          ))}
+          <button type="button" onClick={() => setWeatherOn(v => !v)}
+            className={`rounded-full border px-3 py-1.5 text-xs font-medium transition ${
+              weatherOn ? 'border-red-500 bg-red-50 text-red-700' : 'border-gray-200 bg-white text-gray-500'
+            }`}>
+            ☀️ 天氣
+          </button>
+        </div>
       </div>
+
+      {/* Weather picker (select + input) */}
+      {weatherOn && (
+        <div>
+          <label className="label">天氣</label>
+          <div className="flex gap-2">
+            <div className="flex gap-1">
+              {WEATHERS.map(w => (
+                <button key={w} type="button" onClick={() => setWeatherCond(w)}
+                  className={`h-10 w-10 rounded-xl border-2 text-lg transition ${
+                    weatherCond === w ? 'border-red-500 bg-red-50' : 'border-gray-100 bg-gray-50'
+                  }`}>
+                  {w}
+                </button>
+              ))}
+            </div>
+          </div>
+          <input value={weatherTemp} onChange={e => setWeatherTemp(e.target.value)}
+            placeholder="溫度，如 26°C（選填）" className="input mt-2" />
+        </div>
+      )}
+
+      {/* Location (shown when 地點 enabled) */}
+      {fields.showLocation && (
+        <div>
+          <label className="label">地點標籤</label>
+          <input value={location} onChange={e => setLocation(e.target.value)}
+            placeholder="日本 / 岡山 · 廣島" className="input" />
+        </div>
+      )}
+
       <div>
         <label className="label">主角 / 特派員</label>
         <input value={mainCharacter} onChange={e => setMainCharacter(e.target.value)}
