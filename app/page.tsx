@@ -169,6 +169,15 @@ export default function Dashboard() {
           </Link>
         </div>
 
+        {/* Trip recap entry (only when this trip has spending) */}
+        {tripTotal > 0 && (
+          <Link href="/recap"
+            className="flex items-center justify-between rounded-2xl bg-gradient-to-r from-red-600 to-rose-600 p-3.5 text-white shadow-sm transition active:scale-95">
+            <span className="text-sm font-semibold">📤 製作旅程回顧卡</span>
+            <span className="text-lg">›</span>
+          </Link>
+        )}
+
         {/* Recent */}
         {loading ? (
           <div className="text-center text-sm text-gray-400 py-4">載入中...</div>

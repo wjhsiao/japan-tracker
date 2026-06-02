@@ -36,6 +36,12 @@ export function today(): string {
   return localDate(new Date())
 }
 
+/** "2026-05-31".."2026-06-06" → "05/31 – 06/06" */
+export function prettyRange(start: string, end: string): string {
+  const md = (d: string) => d.slice(5).replace('-', '/')
+  return `${md(start)} – ${md(end)}`
+}
+
 export function daysBetween(start: string, end: string): number {
   const s = new Date(start + 'T00:00:00')
   const e = new Date(end + 'T00:00:00')

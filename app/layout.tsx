@@ -1,8 +1,11 @@
 import type { Metadata, Viewport } from 'next'
-import { Geist } from 'next/font/google'
+import { Geist, Space_Grotesk } from 'next/font/google'
 import './globals.css'
 
 const geist = Geist({ subsets: ['latin'] })
+// Display font for Latin numbers/headlines on share & recap cards (self-hosted,
+// so html-to-image can embed it). CJK falls back to each device's system font.
+const display = Space_Grotesk({ subsets: ['latin'], variable: '--font-display' })
 
 export const metadata: Metadata = {
   title: 'Japan Travel Tracker',
@@ -31,7 +34,7 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
           __html: `if('serviceWorker' in navigator) navigator.serviceWorker.register('/sw.js').catch(()=>{})`,
         }} />
       </head>
-      <body className={`${geist.className} bg-gray-50 antialiased`}>{children}</body>
+      <body className={`${geist.className} ${display.variable} bg-gray-50 antialiased`}>{children}</body>
     </html>
   )
 }
