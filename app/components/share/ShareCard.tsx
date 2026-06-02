@@ -119,7 +119,9 @@ function Newspaper({ data, fields, dayNumber, goldSentence, mainCharacter }: Pro
         )}
       </div>
       <div className="absolute inset-x-0 bottom-0 bg-black/65 px-4 py-3 font-serif backdrop-blur-sm">
-        <p className="text-sm leading-relaxed">據特派員 <span className="font-bold">{mainCharacter || '本人'}</span> 直擊指出：</p>
+        <p className="text-sm leading-relaxed">
+          {mainCharacter ? <>據特派員 <span className="font-bold">{mainCharacter}</span> 直擊指出：</> : '據本台特派員直擊指出：'}
+        </p>
         <p className="mt-1 text-base font-bold leading-snug">「{goldSentence || '錢沒有不見，只是變成喜歡的樣子。'}」</p>
       </div>
     </>
@@ -157,7 +159,7 @@ function RetroPostcard({ data, fields, dayNumber, location, mainCharacter, goldS
         style={{ boxShadow: 'inset 0 0 0 3px rgba(254,243,199,.6)' }}>
         <span className="text-[9px] font-bold tracking-wider">{place.toUpperCase()}</span>
         <span className="text-[10px] font-bold">{prettyDate(data.date)}</span>
-        <span className="text-[8px]">BY {(mainCharacter || 'ME').toUpperCase()}</span>
+        <span className="text-[8px]">BY {(mainCharacter || '旅人').toUpperCase()}</span>
       </div>
       <div className="absolute left-4 top-4 flex h-16 w-14 flex-col items-center justify-center border-2 border-dashed border-amber-100/90 bg-black/30 text-amber-100">
         {fields.showAmount ? (

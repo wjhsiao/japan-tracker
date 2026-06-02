@@ -45,9 +45,8 @@ function ShareInner() {
   const [weatherCond, setWeatherCond] = useState('☀️')
   const [weatherTemp, setWeatherTemp] = useState('')
 
-  useEffect(() => {
-    setMainCharacter(loadSettings().people[0] ?? '')
-  }, [])
+  // Note: intentionally NOT auto-filling a real payer name here — the card is
+  // shared publicly, so the character is an optional alias (代稱), default blank.
 
   // Day-number within the active trip (0 if date is outside the trip)
   const dayNumber = useMemo(() => {
@@ -226,9 +225,9 @@ function ShareInner() {
       )}
 
       <div>
-        <label className="label">主角 / 特派員</label>
+        <label className="label">代稱<span className="ml-1 text-xs font-normal text-gray-400">選填，不填用預設（如「特派員」）</span></label>
         <input value={mainCharacter} onChange={e => setMainCharacter(e.target.value)}
-          placeholder="名字" className="input" />
+          placeholder="旅人、吃貨…（避免放真名）" className="input" />
       </div>
       <div>
         <div className="flex items-center justify-between">
