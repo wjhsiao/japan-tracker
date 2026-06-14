@@ -46,9 +46,10 @@ export default function HistoryPage() {
   async function handleExport() {
     setExporting(true)
     try {
-      // Limited access: only fetch photos for this trip's expenses.
-      const photos = await getPhotosByIds(tripExpenses.map(e => e.id))
-      await exportZip(tripExpenses, settings, photos)
+      // Export exactly what's on screen (respects the active filters), and
+      // limit photo access to just those expenses.
+      const photos = await getPhotosByIds(filtered.map(e => e.id))
+      await exportZip(filtered, settings, photos)
     } catch (err) {
       // User cancelling the native share sheet is not an error.
       if (!(err instanceof Error && err.name === 'AbortError')) {
