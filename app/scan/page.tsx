@@ -10,6 +10,7 @@ import { invalidateExpensesCache } from '@/lib/useExpenses'
 import { compressImage, fetchWithTimeout, formatJPY } from '@/lib/utils'
 import { loadSettings } from '@/lib/settings'
 import { Expense } from '@/lib/types'
+import { savePhoto } from '@/lib/photoStore'
 
 type Step = 'pick' | 'confirm' | 'error'
 
@@ -22,17 +23,23 @@ export default function ScanPage() {
   const [ocrResult, setOcrResult] = useState<OcrResult | null>(null)
   const [isAnalyzing, setIsAnalyzing] = useState(false)
   const [errorMsg, setErrorMsg] = useState('')
+  const [pendingPhoto, setPendingPhoto] = useState<string | null>(null)
 
   async function handleFile(file: File) {
     // Show preview immediately
     setPreview(URL.createObjectURL(file))
     setOcrResult(null)
+    setPendingPhoto(null)
     setIsAnalyzing(true)
     setStep('confirm')
 
     try {
-      // Compress image before sending
-      const { base64, mimeType } = await compressImage(file)
+      // Compress for OCR (1280px) and for local storage (800px) in parallel
+      const [{ base64, mimeType }, { base64: storeBase64 }] = await Promise.all([
+        compressImage(file, 1280, 0.75),
+        compressImage(file, 800, 0.70),
+      ])
+      setPendingPhoto(`data:image/jpeg;base64,${storeBase64}`)
 
       const accessCode = loadSettings().accessCode
       const res = await fetchWithTimeout('/api/ocr', {
@@ -56,6 +63,9 @@ export default function ScanPage() {
 
   async function handleSave(expense: Expense) {
     await addExpense(expense)
+    if (pendingPhoto) {
+      try { await savePhoto(expense.id, pendingPhoto) } catch {}
+    }
     invalidateExpensesCache()
     try { sessionStorage.setItem('japan-tracker:toast', `已新增 ${formatJPY(expense.amountJPY)}`) } catch {}
     router.push('/')
