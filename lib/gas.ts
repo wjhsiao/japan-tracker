@@ -26,29 +26,34 @@ export async function fetchExpenses(): Promise<Expense[]> {
   return data.map((e: Expense) => ({ ...e, date: String(e.date).slice(0, 10) }))
 }
 
-export async function addExpense(expense: Expense): Promise<void> {
+/**
+ * POST a write action. GAS encodes success/failure in the *body*
+ * ({ok:true} / {error:'...'}) while always replying HTTP 200, so checking
+ * res.ok alone silently swallows failures. We inspect the body instead.
+ */
+async function postWrite(payload: object, fallbackMsg: string): Promise<Record<string, unknown>> {
   const res = await fetchWithTimeout(BASE, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json', ...authHeaders() },
-    body: JSON.stringify({ action: 'add', expense }),
+    body: JSON.stringify(payload),
   })
-  if (!res.ok) throw new Error('Failed to add expense')
+  if (res.status === 401) throw new Error('存取密碼錯誤或未設定，請至設定頁輸入')
+  const data = (await res.json().catch(() => ({}))) as Record<string, unknown>
+  if (!res.ok) throw new Error((data.error as string) || fallbackMsg)
+  return data
+}
+
+export async function addExpense(expense: Expense): Promise<void> {
+  const data = await postWrite({ action: 'add', expense }, '新增失敗')
+  if (!data.ok) throw new Error((data.error as string) || '新增失敗')
 }
 
 export async function deleteExpense(id: string): Promise<void> {
-  const res = await fetchWithTimeout(BASE, {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json', ...authHeaders() },
-    body: JSON.stringify({ action: 'delete', id }),
-  })
-  if (!res.ok) throw new Error('Failed to delete expense')
+  const data = await postWrite({ action: 'delete', id }, '刪除失敗')
+  if (!data.ok) throw new Error((data.error as string) || '刪除失敗')
 }
 
 export async function updateExpense(expense: Expense): Promise<void> {
-  const res = await fetchWithTimeout(BASE, {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json', ...authHeaders() },
-    body: JSON.stringify({ action: 'update', expense }),
-  })
-  if (!res.ok) throw new Error('Failed to update expense')
+  const data = await postWrite({ action: 'update', expense }, '更新失敗')
+  if (!data.ok) throw new Error((data.error as string) || '更新失敗')
 }

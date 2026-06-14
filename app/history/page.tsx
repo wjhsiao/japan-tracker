@@ -29,11 +29,18 @@ export default function HistoryPage() {
 
   async function handleDelete(id: string) {
     if (!confirm('確定刪除這筆消費？')) return
-    await deleteExpense(id)
-    try { await deletePhoto(id) } catch {}
-    setExpenses(prev => prev.filter(e => e.id !== id))
-    setPhotoIds(prev => { const s = new Set(prev); s.delete(id); return s })
-    invalidateExpensesCache()
+    try {
+      await deleteExpense(id)
+      try { await deletePhoto(id) } catch {}
+    } catch (err) {
+      alert('刪除失敗，資料未變更：' + String(err))
+    } finally {
+      // Reconcile with the real backend state either way, so the list always
+      // reflects what's actually in the sheet (no silent optimistic removal).
+      invalidateExpensesCache()
+      await refresh()
+      getPhotoIds().then(ids => setPhotoIds(new Set(ids))).catch(() => {})
+    }
   }
 
   async function handleExport() {
