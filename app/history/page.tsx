@@ -1,6 +1,6 @@
 'use client'
 
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import Link from 'next/link'
 import PageShell from '../components/layout/PageShell'
 import CategoryBadge from '../components/expenses/CategoryBadge'
@@ -10,20 +10,42 @@ import { deleteExpense, updateExpense } from '@/lib/gas'
 import { useExpenses, invalidateExpensesCache } from '@/lib/useExpenses'
 import { loadSettings, getActiveTrip, expensesInTrip } from '@/lib/settings'
 import { formatJPY, formatTWD, formatDate, groupByDate, sumJPY } from '@/lib/utils'
+import { getPhotoIds, deletePhoto, getAllPhotos } from '@/lib/photoStore'
+import { exportZip } from '@/lib/exportZip'
 
 export default function HistoryPage() {
   const { expenses, loading, error, refresh, setExpenses } = useExpenses()
   const [editing, setEditing] = useState<Expense | null>(null)
   const [filterCat, setFilterCat] = useState<Category | 'all'>('all')
   const [filterPerson, setFilterPerson] = useState<string | 'all'>('all')
+  const [photoIds, setPhotoIds] = useState<Set<string>>(new Set())
+  const [exporting, setExporting] = useState(false)
   const settings = loadSettings()
   const trip = getActiveTrip(settings)
+
+  useEffect(() => {
+    getPhotoIds().then(ids => setPhotoIds(new Set(ids))).catch(() => {})
+  }, [])
 
   async function handleDelete(id: string) {
     if (!confirm('確定刪除這筆消費？')) return
     await deleteExpense(id)
+    try { await deletePhoto(id) } catch {}
     setExpenses(prev => prev.filter(e => e.id !== id))
+    setPhotoIds(prev => { const s = new Set(prev); s.delete(id); return s })
     invalidateExpensesCache()
+  }
+
+  async function handleExport() {
+    setExporting(true)
+    try {
+      const photos = await getAllPhotos()
+      await exportZip(tripExpenses, settings, photos)
+    } catch (err) {
+      alert('匯出失敗：' + String(err))
+    } finally {
+      setExporting(false)
+    }
   }
 
   async function handleUpdate(expense: Expense) {
@@ -62,7 +84,15 @@ export default function HistoryPage() {
 
   return (
     <PageShell title="消費紀錄" action={
-      <span className="text-sm text-gray-500">{filtered.length} 筆</span>
+      <div className="flex items-center gap-3">
+        <span className="text-sm text-gray-500">{filtered.length} 筆</span>
+        {tripExpenses.length > 0 && (
+          <button onClick={handleExport} disabled={exporting}
+            className="rounded-full bg-gray-100 px-3 py-1 text-xs font-medium text-gray-600 hover:bg-gray-200 transition disabled:opacity-50">
+            {exporting ? '匯出中…' : '📦 匯出'}
+          </button>
+        )}
+      </div>
     }>
       {/* Category filter */}
       {categories.length > 0 && (
@@ -119,7 +149,12 @@ export default function HistoryPage() {
                   <div key={e.id} className="px-4 py-3">
                     <div className="flex items-start gap-3">
                       <div className="flex-1 min-w-0">
-                        <p className="font-medium text-gray-900 truncate">{e.storeName}</p>
+                        <div className="flex items-center gap-1.5">
+                          <p className="font-medium text-gray-900 truncate">{e.storeName}</p>
+                          {photoIds.has(e.id) && (
+                            <span className="shrink-0 text-xs text-gray-400" title="已儲存收據照片">📷</span>
+                          )}
+                        </div>
                         {e.storeNameJa && <p className="text-xs text-gray-400 truncate">{e.storeNameJa}</p>}
                         <div className="mt-1 flex flex-wrap items-center gap-2">
                           <CategoryBadge category={e.category} />
