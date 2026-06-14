@@ -55,23 +55,23 @@ export async function getPhotoIds(): Promise<string[]> {
   })
 }
 
-/** Return all photos as a Map<expenseId, dataUrl>. */
-export async function getAllPhotos(): Promise<Map<string, string>> {
+/**
+ * Fetch only the photos for the given expense IDs (limited access — avoids
+ * loading every trip's photos into memory). Missing IDs are simply absent
+ * from the returned map.
+ */
+export async function getPhotosByIds(expenseIds: string[]): Promise<Map<string, string>> {
+  if (expenseIds.length === 0) return new Map()
   const db = await openDB()
   return new Promise((resolve, reject) => {
     const tx = db.transaction(STORE_NAME, 'readonly')
     const store = tx.objectStore(STORE_NAME)
-    let keys: string[] = []
-    let values: string[] = []
-    const kr = store.getAllKeys()
-    const vr = store.getAll()
-    kr.onsuccess = () => { keys = kr.result as string[] }
-    vr.onsuccess = () => { values = vr.result }
-    tx.oncomplete = () => {
-      const map = new Map<string, string>()
-      keys.forEach((k, i) => map.set(k, values[i]))
-      resolve(map)
+    const map = new Map<string, string>()
+    for (const id of expenseIds) {
+      const req = store.get(id)
+      req.onsuccess = () => { if (req.result != null) map.set(id, req.result) }
     }
+    tx.oncomplete = () => resolve(map)
     tx.onerror = () => reject(tx.error)
   })
 }

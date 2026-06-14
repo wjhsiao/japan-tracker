@@ -10,7 +10,7 @@ import { deleteExpense, updateExpense } from '@/lib/gas'
 import { useExpenses, invalidateExpensesCache } from '@/lib/useExpenses'
 import { loadSettings, getActiveTrip, expensesInTrip } from '@/lib/settings'
 import { formatJPY, formatTWD, formatDate, groupByDate, sumJPY } from '@/lib/utils'
-import { getPhotoIds, deletePhoto, getAllPhotos } from '@/lib/photoStore'
+import { getPhotoIds, deletePhoto, getPhotosByIds } from '@/lib/photoStore'
 import { exportZip } from '@/lib/exportZip'
 
 export default function HistoryPage() {
@@ -39,10 +39,14 @@ export default function HistoryPage() {
   async function handleExport() {
     setExporting(true)
     try {
-      const photos = await getAllPhotos()
+      // Limited access: only fetch photos for this trip's expenses.
+      const photos = await getPhotosByIds(tripExpenses.map(e => e.id))
       await exportZip(tripExpenses, settings, photos)
     } catch (err) {
-      alert('匯出失敗：' + String(err))
+      // User cancelling the native share sheet is not an error.
+      if (!(err instanceof Error && err.name === 'AbortError')) {
+        alert('匯出失敗：' + String(err))
+      }
     } finally {
       setExporting(false)
     }

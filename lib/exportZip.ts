@@ -75,10 +75,22 @@ export async function exportZip(
   zip.file('花費明細.xlsx', xlsxBuf)
 
   const blob = await zip.generateAsync({ type: 'blob' })
+  const filename = 'japan-tracker-export.zip'
+
+  // Prefer the native share sheet (matches lib/shareExport.ts) so the zip can
+  // go straight to Drive / Gmail / etc. on mobile; fall back to a download.
+  const file = new File([blob], filename, { type: 'application/zip' })
+  const navAny = navigator as Navigator & { canShare?: (d?: unknown) => boolean }
+  if (navAny.canShare && navAny.canShare({ files: [file] })) {
+    await navigator.share({ files: [file], title: '日本旅遊花費匯出' })
+    return
+  }
+
   const url = URL.createObjectURL(blob)
   const a = document.createElement('a')
   a.href = url
-  a.download = `japan-tracker-export.zip`
+  a.download = filename
   a.click()
-  URL.revokeObjectURL(url)
+  // Defer revoke so the browser has time to start reading the (multi-MB) blob.
+  setTimeout(() => URL.revokeObjectURL(url), 1000)
 }
