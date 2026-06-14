@@ -78,12 +78,20 @@ export async function exportZip(
   const filename = 'japan-tracker-export.zip'
 
   // Prefer the native share sheet (matches lib/shareExport.ts) so the zip can
-  // go straight to Drive / Gmail / etc. on mobile; fall back to a download.
+  // go straight to Drive / Gmail / etc. on mobile. navigator.share needs
+  // transient user activation, which the zip-building awaits above may have
+  // already consumed — if so it throws NotAllowedError, and we fall back to a
+  // plain download (which doesn't need activation).
   const file = new File([blob], filename, { type: 'application/zip' })
   const navAny = navigator as Navigator & { canShare?: (d?: unknown) => boolean }
   if (navAny.canShare && navAny.canShare({ files: [file] })) {
-    await navigator.share({ files: [file], title: '日本旅遊花費匯出' })
-    return
+    try {
+      await navigator.share({ files: [file], title: '日本旅遊花費匯出' })
+      return
+    } catch (err) {
+      // User cancelled the sheet → stop. Anything else → fall through to download.
+      if (err instanceof Error && err.name === 'AbortError') return
+    }
   }
 
   const url = URL.createObjectURL(blob)
