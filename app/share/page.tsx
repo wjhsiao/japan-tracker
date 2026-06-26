@@ -38,6 +38,8 @@ function ShareInner() {
   const [goldSentence, setGoldSentence] = useState('')
   const [exporting, setExporting] = useState(false)
   const [aiNote, setAiNote] = useState('')
+  const [generatingCaption, setGeneratingCaption] = useState(false)
+  const [captionOptions, setCaptionOptions] = useState<string[]>([])
 
   // Optional info toggles + weather (select emoji + free text)
   const [fields, setFields] = useState<ShareFields>(DEFAULT_SHARE_FIELDS)
@@ -109,10 +111,40 @@ function ShareInner() {
     }
   }
 
-  function suggestCaption() {
-    // Step 6 (AI 金句) wires to /api/caption once Gemini key is active.
-    setAiNote('AI 金句需 Gemini 金鑰啟用後才能使用，目前請手動輸入 ✍️')
-    setTimeout(() => setAiNote(''), 4000)
+  async function suggestCaption() {
+    setGeneratingCaption(true)
+    setCaptionOptions([])
+    setAiNote('')
+    try {
+      const dayExpenses = expenses.filter(e => e.date === date)
+      const storeNames = [...new Set(dayExpenses.map(e => e.storeName))]
+      const res = await fetch('/api/caption', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'x-access-code': settings.accessCode ?? '',
+        },
+        body: JSON.stringify({
+          totalAmountJPY: data.totalAmount,
+          topItemName: data.topItemName,
+          storeNames,
+          location,
+          theme,
+        }),
+      })
+      const json = await res.json()
+      if (json.captions?.length) {
+        setCaptionOptions(json.captions)
+      } else {
+        setAiNote('生成失敗，請手動輸入 ✍️')
+        setTimeout(() => setAiNote(''), 3000)
+      }
+    } catch {
+      setAiNote('生成失敗，請手動輸入 ✍️')
+      setTimeout(() => setAiNote(''), 3000)
+    } finally {
+      setGeneratingCaption(false)
+    }
   }
 
   async function handleExport() {
@@ -244,14 +276,25 @@ function ShareInner() {
       <div>
         <div className="flex items-center justify-between">
           <label className="label mb-0">金句</label>
-          <button type="button" onClick={suggestCaption}
-            className="text-xs font-medium text-red-600 hover:text-red-700">
-            ✨ 幫我想金句
+          <button type="button" onClick={suggestCaption} disabled={generatingCaption}
+            className="text-xs font-medium text-red-600 hover:text-red-700 disabled:opacity-50">
+            {generatingCaption ? '生成中…' : '✨ 幫我想金句'}
           </button>
         </div>
         <textarea value={goldSentence} onChange={e => setGoldSentence(e.target.value)}
           placeholder="今天的心得 / 金句…" rows={2} className="input mt-1.5 resize-none" />
         {aiNote && <p className="mt-1 text-xs text-amber-600">{aiNote}</p>}
+        {captionOptions.length > 0 && (
+          <div className="mt-2 space-y-1.5">
+            {captionOptions.map((c, i) => (
+              <button key={i} type="button"
+                onClick={() => { setGoldSentence(c); setCaptionOptions([]) }}
+                className="w-full rounded-xl border border-red-100 bg-red-50 px-3 py-2 text-left text-sm text-red-800 hover:bg-red-100 transition">
+                {c}
+              </button>
+            ))}
+          </div>
+        )}
       </div>
 
       {/* Export */}
