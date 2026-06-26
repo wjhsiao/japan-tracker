@@ -35,6 +35,7 @@ export async function POST(req: NextRequest) {
 
   const { totalAmountJPY, topItemName, storeNames, location, theme } = body
   const tone = THEME_TONES[theme] ?? '有個性的旅遊風格'
+  const safeStoreNames = Array.isArray(storeNames) ? storeNames : []
 
   const prompt = `你是日本旅遊分享卡片的金句生成器。根據以下消費資訊，產生 3 句不同風格的金句（繁體中文，每句 15–30 字）。
 
@@ -42,7 +43,7 @@ export async function POST(req: NextRequest) {
 - 地點：${location || '日本'}
 - 今日總消費：¥${totalAmountJPY}
 - 花最多的：${topItemName || '美食'}
-- 消費店家：${storeNames.join('、') || '無'}
+- 消費店家：${safeStoreNames.join('、') || '無'}
 
 風格：${tone}
 
@@ -73,8 +74,10 @@ export async function POST(req: NextRequest) {
     const data = await res.json()
     const parts: Array<{ thought?: boolean; text?: string }> =
       data.candidates?.[0]?.content?.parts ?? []
-    const text: string =
-      parts.find(p => !p.thought && typeof p.text === 'string')?.text ?? ''
+    const text: string = [
+      ...parts.filter(p => !p.thought && typeof p.text === 'string'),
+      ...parts.filter(p =>  p.thought && typeof p.text === 'string'),
+    ].map(p => p.text).join('\n')
 
     const captions = text
       .split('\n')

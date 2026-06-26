@@ -132,6 +132,12 @@ function ShareInner() {
           theme,
         }),
       })
+      if (!res.ok) {
+        const note = res.status === 401 ? '請先在設定頁輸入存取密碼' : '生成失敗，請稍後再試'
+        setAiNote(note)
+        setTimeout(() => setAiNote(''), 3000)
+        return
+      }
       const json = await res.json()
       if (json.captions?.length) {
         setCaptionOptions(json.captions)

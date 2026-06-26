@@ -28,7 +28,7 @@ function sanitizeOcr(raw: unknown): OcrResult {
 const GEMINI_URL =
   'https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent'
 
-const SYSTEM_PROMPT = `You are a Japanese receipt OCR assistant. Analyze this receipt image and extract information.
+function buildSystemPrompt() { return `You are a Japanese receipt OCR assistant. Analyze this receipt image and extract information.
 
 Return ONLY valid JSON — no markdown, no code blocks, no explanation.
 
@@ -62,7 +62,7 @@ Rules:
 - If store name is unclear, use "不明店家"
 - taxBreakdown: only include rates that actually appear on the receipt
 - category: use 便利商店 for konbini (7-Eleven, FamilyMart, Lawson, etc.)
-- All monetary values must be integers (JPY has no decimals)`
+- All monetary values must be integers (JPY has no decimals)` }
 
 // Max base64 length (~1MB encoded ≈ 750KB raw image). Compressed images are far smaller.
 const MAX_IMAGE_BASE64 = 1_000_000
@@ -98,7 +98,7 @@ export async function POST(req: NextRequest) {
     contents: [
       {
         parts: [
-          { text: SYSTEM_PROMPT },
+          { text: buildSystemPrompt() },
           { inline_data: { mime_type: mimeType || 'image/jpeg', data: imageBase64 } },
         ],
       },
