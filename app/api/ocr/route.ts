@@ -26,7 +26,7 @@ function sanitizeOcr(raw: unknown): OcrResult {
 }
 
 const GEMINI_URL =
-  'https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash-lite:generateContent'
+  'https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent'
 
 const SYSTEM_PROMPT = `You are a Japanese receipt OCR assistant. Analyze this receipt image and extract information.
 
