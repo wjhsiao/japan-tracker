@@ -123,17 +123,21 @@ export async function POST(req: NextRequest) {
     }
 
     const data = await res.json()
-    // gemini-2.5-flash is a thinking model: parts[0] may be the thought, not the answer.
-    // Find the first non-thought part that contains text.
+    // gemini-2.5-flash is a thinking model: collect all text parts (non-thought first,
+    // then thought as fallback) and join them so we don't miss the answer.
     const parts: Array<{ thought?: boolean; text?: string }> =
       data.candidates?.[0]?.content?.parts ?? []
-    const text: string =
-      (parts.find(p => !p.thought && typeof p.text === 'string')?.text) ?? ''
+    const allText: string = [
+      ...parts.filter(p => !p.thought && typeof p.text === 'string'),
+      ...parts.filter(p =>  p.thought && typeof p.text === 'string'),
+    ].map(p => p.text).join('\n')
 
-    const cleaned = text.replace(/```json\n?/g, '').replace(/```\n?/g, '').trim()
+    // Strip markdown fences, then try to find a JSON object anywhere in the text.
+    const stripped = allText.replace(/```json\n?/g, '').replace(/```\n?/g, '').trim()
+    const jsonMatch = stripped.match(/\{[\s\S]*\}/)
     let parsed: unknown
     try {
-      parsed = JSON.parse(cleaned)
+      parsed = JSON.parse(jsonMatch?.[0] ?? stripped)
     } catch {
       return Response.json({ error: '辨識結果格式錯誤，請改用手動輸入' }, { status: 502 })
     }
