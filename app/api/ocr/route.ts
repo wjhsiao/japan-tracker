@@ -123,7 +123,12 @@ export async function POST(req: NextRequest) {
     }
 
     const data = await res.json()
-    const text: string = data.candidates?.[0]?.content?.parts?.[0]?.text ?? ''
+    // gemini-2.5-flash is a thinking model: parts[0] may be the thought, not the answer.
+    // Find the first non-thought part that contains text.
+    const parts: Array<{ thought?: boolean; text?: string }> =
+      data.candidates?.[0]?.content?.parts ?? []
+    const text: string =
+      (parts.find(p => !p.thought && typeof p.text === 'string')?.text) ?? ''
 
     const cleaned = text.replace(/```json\n?/g, '').replace(/```\n?/g, '').trim()
     let parsed: unknown
