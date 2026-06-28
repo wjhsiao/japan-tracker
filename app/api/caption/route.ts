@@ -17,7 +17,7 @@ const THEME_TONES: Record<string, string> = {
 
 export async function POST(req: NextRequest) {
   const accessCode = process.env.ACCESS_CODE
-  if (accessCode && req.headers.get('x-access-code') !== accessCode) {
+  if (!accessCode || req.headers.get('x-access-code') !== accessCode) {
     return Response.json({ error: 'Unauthorized' }, { status: 401 })
   }
 

@@ -70,7 +70,7 @@ const MAX_IMAGE_BASE64 = 1_000_000
 export async function POST(req: NextRequest) {
   // Access-code gate: protects this paid endpoint from anonymous abuse.
   const accessCode = process.env.ACCESS_CODE
-  if (accessCode && req.headers.get('x-access-code') !== accessCode) {
+  if (!accessCode || req.headers.get('x-access-code') !== accessCode) {
     return Response.json({ error: 'Unauthorized' }, { status: 401 })
   }
 
@@ -99,7 +99,7 @@ export async function POST(req: NextRequest) {
       {
         parts: [
           { text: buildSystemPrompt() },
-          { inline_data: { mime_type: mimeType || 'image/jpeg', data: imageBase64 } },
+          { inline_data: { mime_type: ['image/jpeg','image/png','image/webp','image/heic','image/heif'].includes(mimeType) ? mimeType : 'image/jpeg', data: imageBase64 } },
         ],
       },
     ],

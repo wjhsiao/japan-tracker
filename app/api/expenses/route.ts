@@ -13,7 +13,7 @@ const ACCESS_CODE = process.env.ACCESS_CODE ?? ''
 
 /** Reject if an access code is configured but the request doesn't match. */
 function unauthorized(req: NextRequest): boolean {
-  return !!ACCESS_CODE && req.headers.get('x-access-code') !== ACCESS_CODE
+  return !ACCESS_CODE || req.headers.get('x-access-code') !== ACCESS_CODE
 }
 
 export async function GET(req: NextRequest) {
