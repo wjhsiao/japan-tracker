@@ -30,34 +30,43 @@ const NUMERIC_COLUMNS = [
   'cardFeeRate', 'cardCashbackRate', 'totalBaseAmountTWD'
 ]
 
+const KNOWN_COLUMNS = [...LEGACY_COLUMNS, ...NEW_COLUMNS]
+
 // ─── helpers ────────────────────────────────────────────────────────────────
 
+// Returns { sheet, headers } so callers don't need a second getRange() just for headers.
 function getSheet() {
   const ss = SpreadsheetApp.getActiveSpreadsheet()
   let sheet = ss.getSheetByName(SHEET_NAME)
   if (!sheet) {
     sheet = ss.insertSheet(SHEET_NAME)
-    sheet.appendRow([...LEGACY_COLUMNS, ...NEW_COLUMNS])
+    const headers = [...LEGACY_COLUMNS, ...NEW_COLUMNS]
+    sheet.appendRow(headers)
     sheet.setFrozenRows(1)
-    return sheet
+    return { sheet, headers }
   }
   // Self-heal: append any columns missing from an existing sheet's header
   // (e.g. a spreadsheet created before the dual-currency/card feature shipped).
   const lastCol = sheet.getLastColumn()
-  const headers = sheet.getRange(1, 1, 1, lastCol).getValues()[0]
+  let headers = sheet.getRange(1, 1, 1, lastCol).getValues()[0]
   const missing = NEW_COLUMNS.filter(c => headers.indexOf(c) === -1)
   if (missing.length > 0) {
     sheet.getRange(1, lastCol + 1, 1, missing.length).setValues([missing])
+    headers = [...headers, ...missing]
   }
-  return sheet
+  return { sheet, headers }
 }
 
 // Build one sheet row, in the sheet's current header order, from an expense object.
-function buildRow(headers, ex) {
-  return headers.map(h => {
+// `existingRow` (the row's current values, for updates) is passed through unchanged
+// for any header this app doesn't recognize — e.g. a column the user added by hand
+// directly in Google Sheets — so we never blank data we don't know about.
+function buildRow(headers, ex, existingRow) {
+  return headers.map((h, i) => {
     if (h === 'items') return JSON.stringify(ex.items || [])
     if (h === 'notes') return ex.notes || ''
     if (h === 'receiptBase64') return ex.receiptBase64 || ''
+    if (KNOWN_COLUMNS.indexOf(h) === -1) return existingRow ? existingRow[i] : ''
     const v = ex[h]
     return (v === undefined || v === null) ? '' : v
   })
@@ -81,7 +90,7 @@ function doGet(e) {
   if (!e || !e.parameter || e.parameter.token !== TOKEN) {
     return jsonResponse({ error: 'Unauthorized' })
   }
-  const sheet = getSheet()
+  const { sheet } = getSheet()
   const data = sheet.getDataRange().getValues()
   const headers = data[0]
   const rows = data.slice(1).map(row => {
@@ -126,11 +135,10 @@ function doPost(e) {
   }
 
   const { action } = body
-  const sheet = getSheet()
+  const { sheet, headers } = getSheet()
 
   if (action === 'add') {
     const ex = body.expense
-    const headers = sheet.getRange(1, 1, 1, sheet.getLastColumn()).getValues()[0]
     sheet.appendRow(buildRow(headers, ex))
     return jsonResponse({ ok: true })
   }
@@ -149,10 +157,9 @@ function doPost(e) {
   if (action === 'update') {
     const ex = body.expense
     const data = sheet.getDataRange().getValues()
-    const headers = data[0]
     for (let i = 1; i < data.length; i++) {
       if (data[i][0] === ex.id) {
-        sheet.getRange(i + 1, 1, 1, headers.length).setValues([buildRow(headers, ex)])
+        sheet.getRange(i + 1, 1, 1, headers.length).setValues([buildRow(headers, ex, data[i])])
         return jsonResponse({ ok: true })
       }
     }

@@ -5,7 +5,7 @@ import { v4 as uuidv4 } from 'uuid'
 import { Expense, OcrResult, Category, Currency, CATEGORIES, PAYMENT_METHODS, PAYMENT_COLORS } from '@/lib/types'
 import { loadSettings } from '@/lib/settings'
 import { today } from '@/lib/utils'
-import { convertAmount, calcCardTotal } from '@/lib/currency'
+import { convertAmount, calcCardTotal, pct } from '@/lib/currency'
 
 interface Props {
   // Covers both OCR results (new scan) and existing Expense edits.
@@ -18,6 +18,8 @@ interface Props {
     inputAmount?: number
     inputCurrency?: Currency
     cardId?: string
+    cardFeeRate?: number
+    cardCashbackRate?: number
   }
   onSave: (expense: Expense) => Promise<void>
   onCancel: () => void
@@ -80,17 +82,17 @@ export default function ExpenseForm({ initial, onSave, onCancel, saveLabel = '�
     : undefined
   // cardId can point at a card deleted in Settings since it was last saved (no referential integrity)
   const cardMissing = paymentMethod === '信用卡' && !!cardId && !selectedCard
-  const cardTotalPreview = selectedCard
-    ? calcCardTotal(converted.baseAmountTWD, selectedCard.feeRate, selectedCard.cashbackRate)
-    : converted.baseAmountTWD
+  // If the card was deleted, fall back to the expense's own previously-saved rates
+  // (still present on `initial`) instead of silently zeroing them out.
+  const feeRate = selectedCard?.feeRate ?? (cardMissing ? initial?.cardFeeRate : undefined) ?? 0
+  const cashbackRate = selectedCard?.cashbackRate ?? (cardMissing ? initial?.cardCashbackRate : undefined) ?? 0
+  const cardTotalPreview = calcCardTotal(converted.baseAmountTWD, feeRate, cashbackRate)
 
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault()
     if (disabled) return
     if (!parsedInput || parsedInput <= 0) { setError('請輸入有效金額'); return }
     const currency: Currency = isBaseCurrency ? 'TWD' : 'JPY'
-    const feeRate = selectedCard?.feeRate ?? 0
-    const cashbackRate = selectedCard?.cashbackRate ?? 0
     const totalBaseAmountTWD = calcCardTotal(converted.baseAmountTWD, feeRate, cashbackRate)
     setSaving(true)
     setError('')
@@ -232,13 +234,13 @@ export default function ExpenseForm({ initial, onSave, onCancel, saveLabel = '�
           </div>
           {cardMissing && (
             <p className="mt-2 text-xs text-amber-600">
-              ⚠️ 原本選擇的信用卡已被刪除，請重新選擇（儲存前手續費/回饋將以 0% 計算）
+              ⚠️ 原本選擇的信用卡已被刪除，將沿用原記錄的手續費 {pct(feeRate)}% / 回饋 {pct(cashbackRate)}%，如需更新請重新選擇
             </p>
           )}
-          {selectedCard && parsedInput > 0 && (
+          {(selectedCard || cardMissing) && parsedInput > 0 && (
             <p className="mt-2 text-xs text-gray-500">
               預估帳單扣款：NT$ {cardTotalPreview.toLocaleString()}
-              （已含 {(selectedCard.feeRate * 100).toFixed(1)}% 手續費，並扣除 {(selectedCard.cashbackRate * 100).toFixed(1)}% 回饋）
+              （已含 {pct(feeRate)}% 手續費，並扣除 {pct(cashbackRate)}% 回饋）
             </p>
           )}
         </div>

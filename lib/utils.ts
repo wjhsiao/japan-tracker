@@ -1,13 +1,12 @@
-import { convertAmount } from './currency'
-
 export function formatJPY(amount: number): string {
   return `¥${Math.round(amount).toLocaleString('en-US')}`
 }
 
 export function formatTWD(amountJPY: number, rate: number): string {
-  // Route through convertAmount so the displayed figure always matches the
-  // baseAmountTWD an expense actually stores for the same amount/rate.
-  const twd = Math.round(convertAmount(amountJPY, 'JPY', rate).baseAmountTWD)
+  // Round directly to an integer in one pass — rounding to 2 decimals first
+  // (as convertAmount's baseAmountTWD does) and then to an integer here would
+  // double-round and occasionally be off by NT$1 at boundary values.
+  const twd = Math.round(amountJPY * rate)
   return `NT$${twd.toLocaleString('en-US')}`
 }
 
