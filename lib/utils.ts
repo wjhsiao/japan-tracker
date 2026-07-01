@@ -1,9 +1,13 @@
+import { convertAmount } from './currency'
+
 export function formatJPY(amount: number): string {
   return `¥${Math.round(amount).toLocaleString('en-US')}`
 }
 
 export function formatTWD(amountJPY: number, rate: number): string {
-  const twd = Math.round(amountJPY * rate)
+  // Route through convertAmount so the displayed figure always matches the
+  // baseAmountTWD an expense actually stores for the same amount/rate.
+  const twd = Math.round(convertAmount(amountJPY, 'JPY', rate).baseAmountTWD)
   return `NT$${twd.toLocaleString('en-US')}`
 }
 

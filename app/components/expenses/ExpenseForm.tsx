@@ -78,6 +78,8 @@ export default function ExpenseForm({ initial, onSave, onCancel, saveLabel = '�
   const selectedCard = paymentMethod === '信用卡'
     ? settings.cardSettings.find(c => c.id === cardId)
     : undefined
+  // cardId can point at a card deleted in Settings since it was last saved (no referential integrity)
+  const cardMissing = paymentMethod === '信用卡' && !!cardId && !selectedCard
   const cardTotalPreview = selectedCard
     ? calcCardTotal(converted.baseAmountTWD, selectedCard.feeRate, selectedCard.cashbackRate)
     : converted.baseAmountTWD
@@ -212,7 +214,7 @@ export default function ExpenseForm({ initial, onSave, onCancel, saveLabel = '�
       </div>
 
       {/* Credit card selector + fee/cashback preview */}
-      {paymentMethod === '信用卡' && settings.cardSettings.length > 0 && (
+      {paymentMethod === '信用卡' && (settings.cardSettings.length > 0 || cardMissing) && (
         <div>
           <label className="label">選擇信用卡</label>
           <div className="flex gap-2 flex-wrap">
@@ -227,6 +229,11 @@ export default function ExpenseForm({ initial, onSave, onCancel, saveLabel = '�
               </button>
             ))}
           </div>
+          {cardMissing && (
+            <p className="mt-2 text-xs text-amber-600">
+              ⚠️ 原本選擇的信用卡已被刪除，請重新選擇（儲存前手續費/回饋將以 0% 計算）
+            </p>
+          )}
           {selectedCard && parsedInput > 0 && (
             <p className="mt-2 text-xs text-gray-500">
               預估帳單扣款：NT$ {cardTotalPreview.toLocaleString()}

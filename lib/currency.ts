@@ -1,4 +1,4 @@
-import { Currency } from './types'
+import type { Currency } from './types'
 
 /** Round to 2 decimal places, avoiding floating-point noise (e.g. 0.1 + 0.2). */
 export function round2(n: number): number {
@@ -26,4 +26,9 @@ export function convertAmount(
 /** Apply a credit card's overseas fee/cashback to a TWD base amount → estimated statement total. */
 export function calcCardTotal(baseAmountTWD: number, feeRate: number, cashbackRate: number): number {
   return round2(baseAmountTWD * (1 + feeRate - cashbackRate))
+}
+
+/** Decimal rate (0.015) → percent for display, rounded to avoid floating-point noise (e.g. 1.4999999999999998). */
+export function pct(n: number): number {
+  return Math.round(n * 10000) / 100
 }

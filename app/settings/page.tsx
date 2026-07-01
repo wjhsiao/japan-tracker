@@ -6,9 +6,7 @@ import PageShell from '../components/layout/PageShell'
 import { loadSettings, saveSettings } from '@/lib/settings'
 import { Trip, CardSetting } from '@/lib/types'
 import { today } from '@/lib/utils'
-
-/** Decimal rate (0.015) → percent for display, rounded to avoid floating-point noise (e.g. 1.4999999999999998). */
-const pct = (n: number) => Math.round(n * 10000) / 100
+import { pct } from '@/lib/currency'
 
 export default function SettingsPage() {
   const router = useRouter()
