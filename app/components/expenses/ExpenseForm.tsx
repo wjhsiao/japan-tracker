@@ -159,7 +159,8 @@ export default function ExpenseForm({ initial, onSave, onCancel, saveLabel = 'å„
             <input type="number" inputMode="decimal" min="0" step="any" value={inputAmount}
               autoFocus={autoFocusAmount}
               onChange={e => setInputAmount(e.target.value)}
-              placeholder="0" className="input pl-9 text-lg font-semibold" required />
+              placeholder="0"
+              className={`input text-lg font-semibold ${isBaseCurrency ? 'pl-14' : 'pl-9'}`} required />
           </div>
           {parsedInput > 0 && (
             <p className="mt-1 text-right text-xs text-gray-400">
