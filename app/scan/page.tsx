@@ -7,7 +7,7 @@ import ExpenseForm from '../components/expenses/ExpenseForm'
 import { OcrResult } from '@/lib/types'
 import { addExpense } from '@/lib/gas'
 import { invalidateExpensesCache } from '@/lib/useExpenses'
-import { compressImage, fetchWithTimeout, formatJPY } from '@/lib/utils'
+import { compressImage, fetchWithTimeout, formatJPY, today } from '@/lib/utils'
 import { loadSettings } from '@/lib/settings'
 import { Expense } from '@/lib/types'
 import { savePhoto } from '@/lib/photoStore'
@@ -48,7 +48,7 @@ export default function ScanPage() {
           'Content-Type': 'application/json',
           ...(accessCode ? { 'x-access-code': accessCode } : {}),
         },
-        body: JSON.stringify({ imageBase64: base64, mimeType }),
+        body: JSON.stringify({ imageBase64: base64, mimeType, localDate: today() }),
       }, 25000)
       const data = await res.json()
       if (!res.ok || data.error) throw new Error(data.error ?? 'OCR failed')

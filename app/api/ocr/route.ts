@@ -5,14 +5,14 @@ import { CATEGORIES, PAYMENT_METHODS, Category, PaymentMethod, OcrResult } from 
 const CATEGORY_VALUES = CATEGORIES.map(c => c.value)
 
 /** Coerce Gemini's raw output into a safe OcrResult; never trust the model blindly. */
-function sanitizeOcr(raw: unknown): OcrResult {
+function sanitizeOcr(raw: unknown, fallbackDate: string): OcrResult {
   const r = (raw ?? {}) as Record<string, unknown>
   const amount = Math.round(Number(r.amountJPY))
   const cat = r.category as Category
   const pay = r.paymentMethod as PaymentMethod
   const dateStr = typeof r.date === 'string' && /^\d{4}-\d{2}-\d{2}$/.test(r.date)
     ? r.date
-    : new Date().toISOString().slice(0, 10)
+    : fallbackDate
   return {
     storeName: typeof r.storeName === 'string' ? r.storeName : '',
     storeNameJa: typeof r.storeNameJa === 'string' ? r.storeNameJa : '',
@@ -28,7 +28,7 @@ function sanitizeOcr(raw: unknown): OcrResult {
 const GEMINI_URL =
   'https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent'
 
-function buildSystemPrompt() { return `You are a Japanese receipt OCR assistant. Analyze this receipt image and extract information.
+function buildSystemPrompt(today: string) { return `You are a Japanese receipt OCR assistant. Analyze this receipt image and extract information.
 
 Return ONLY valid JSON — no markdown, no code blocks, no explanation.
 
@@ -58,7 +58,7 @@ Schema:
 Rules:
 - amountJPY = total amount the customer paid (合計 or お会計)
 - Food/beverages are typically 8% tax (軽減税率), other goods 10%
-- If date is missing, use today: ${new Date().toISOString().slice(0, 10)}
+- If date is missing, use today: ${today}
 - If store name is unclear, use "不明店家"
 - taxBreakdown: only include rates that actually appear on the receipt
 - category: use 便利商店 for konbini (7-Eleven, FamilyMart, Lawson, etc.)
@@ -79,7 +79,7 @@ export async function POST(req: NextRequest) {
     return Response.json({ error: 'GEMINI_API_KEY not configured' }, { status: 500 })
   }
 
-  let body: { imageBase64: string; mimeType: string }
+  let body: { imageBase64: string; mimeType: string; localDate?: string }
   try {
     body = await req.json()
   } catch {
@@ -87,6 +87,9 @@ export async function POST(req: NextRequest) {
   }
 
   const { imageBase64, mimeType } = body
+  const fallbackDate = typeof body.localDate === 'string' && /^\d{4}-\d{2}-\d{2}$/.test(body.localDate)
+    ? body.localDate
+    : new Date().toISOString().slice(0, 10)
   if (!imageBase64) {
     return Response.json({ error: 'imageBase64 is required' }, { status: 400 })
   }
@@ -98,7 +101,7 @@ export async function POST(req: NextRequest) {
     contents: [
       {
         parts: [
-          { text: buildSystemPrompt() },
+          { text: buildSystemPrompt(fallbackDate) },
           { inline_data: { mime_type: ['image/jpeg','image/png','image/webp','image/heic','image/heif'].includes(mimeType) ? mimeType : 'image/jpeg', data: imageBase64 } },
         ],
       },
@@ -143,7 +146,7 @@ export async function POST(req: NextRequest) {
       return Response.json({ error: '辨識結果格式錯誤，請改用手動輸入' }, { status: 502 })
     }
 
-    return Response.json(sanitizeOcr(parsed))
+    return Response.json(sanitizeOcr(parsed, fallbackDate))
   } catch (err) {
     return Response.json({ error: String(err) }, { status: 500 })
   }
