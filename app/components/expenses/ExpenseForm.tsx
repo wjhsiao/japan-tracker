@@ -2,14 +2,23 @@
 
 import { useState, useEffect } from 'react'
 import { v4 as uuidv4 } from 'uuid'
-import { Expense, OcrResult, Category, CATEGORIES, PAYMENT_METHODS, PAYMENT_COLORS } from '@/lib/types'
+import { Expense, OcrResult, Category, Currency, CATEGORIES, PAYMENT_METHODS, PAYMENT_COLORS } from '@/lib/types'
 import { loadSettings } from '@/lib/settings'
 import { today } from '@/lib/utils'
+import { convertAmount, calcCardTotal } from '@/lib/currency'
 
 interface Props {
   // Covers both OCR results (new scan) and existing Expense edits.
   // id/createdAt present ⇒ editing an existing row (must be preserved, not regenerated).
-  initial?: Partial<OcrResult> & { id?: string; paidBy?: string; notes?: string; createdAt?: string }
+  initial?: Partial<OcrResult> & {
+    id?: string
+    paidBy?: string
+    notes?: string
+    createdAt?: string
+    inputAmount?: number
+    inputCurrency?: Currency
+    cardId?: string
+  }
   onSave: (expense: Expense) => Promise<void>
   onCancel: () => void
   saveLabel?: string
@@ -29,12 +38,17 @@ export default function ExpenseForm({ initial, onSave, onCancel, saveLabel = '�
   const [date, setDate] = useState(initial?.date ?? today())
   const [storeName, setStoreName] = useState(initial?.storeName ?? '')
   const [storeNameJa, setStoreNameJa] = useState(initial?.storeNameJa ?? '')
-  const [amountJPY, setAmountJPY] = useState(initial?.amountJPY ? String(initial.amountJPY) : '')
+  const [isBaseCurrency, setIsBaseCurrency] = useState(initial?.inputCurrency === 'TWD')
+  const [inputAmount, setInputAmount] = useState(
+    initial?.inputAmount != null ? String(initial.inputAmount)
+      : initial?.amountJPY ? String(initial.amountJPY) : ''
+  )
   const [category, setCategory] = useState<Category>(initial?.category ?? '其他')
   const [paymentMethod, setPaymentMethod] = useState(initial?.paymentMethod ?? '現金')
   const [paidBy, setPaidBy] = useState(initial?.paidBy ?? settings.people[0] ?? '')
   const [notes, setNotes] = useState(initial?.notes ?? '')
   const [items, setItems] = useState(initial?.items ?? [])
+  const [cardId, setCardId] = useState(initial?.cardId ?? settings.cardSettings[0]?.id ?? '')
 
   // When OCR result arrives after form is already mounted, sync the fields
   useEffect(() => {
@@ -42,20 +56,40 @@ export default function ExpenseForm({ initial, onSave, onCancel, saveLabel = '�
     if (initial.date) setDate(initial.date)
     if (initial.storeName) setStoreName(initial.storeName)
     if (initial.storeNameJa) setStoreNameJa(initial.storeNameJa)
-    if (initial.amountJPY) setAmountJPY(String(initial.amountJPY))
+    if (initial.inputAmount != null) {
+      setInputAmount(String(initial.inputAmount))
+      setIsBaseCurrency(initial.inputCurrency === 'TWD')
+    } else if (initial.amountJPY) {
+      setInputAmount(String(initial.amountJPY))
+      setIsBaseCurrency(false)
+    }
     if (initial.category) setCategory(initial.category)
     if (initial.paymentMethod) setPaymentMethod(initial.paymentMethod)
     if (initial.items) setItems(initial.items)
     if (initial.paidBy) setPaidBy(initial.paidBy)
     if (initial.notes) setNotes(initial.notes)
+    if (initial.cardId) setCardId(initial.cardId)
     if (initial.storeNameJa || initial.notes) setShowMore(true)
   }, [initial])
+
+  const rate = settings.exchangeRateJPYtoTWD
+  const parsedInput = parseFloat(inputAmount.replace(/,/g, '')) || 0
+  const converted = convertAmount(parsedInput, isBaseCurrency ? 'TWD' : 'JPY', rate)
+  const selectedCard = paymentMethod === '信用卡'
+    ? settings.cardSettings.find(c => c.id === cardId)
+    : undefined
+  const cardTotalPreview = selectedCard
+    ? calcCardTotal(converted.baseAmountTWD, selectedCard.feeRate, selectedCard.cashbackRate)
+    : converted.baseAmountTWD
 
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault()
     if (disabled) return
-    const amount = parseInt(amountJPY.replace(/,/g, ''), 10)
-    if (!amount || amount <= 0) { setError('請輸入有效金額'); return }
+    if (!parsedInput || parsedInput <= 0) { setError('請輸入有效金額'); return }
+    const currency: Currency = isBaseCurrency ? 'TWD' : 'JPY'
+    const feeRate = selectedCard?.feeRate ?? 0
+    const cashbackRate = selectedCard?.cashbackRate ?? 0
+    const totalBaseAmountTWD = calcCardTotal(converted.baseAmountTWD, feeRate, cashbackRate)
     setSaving(true)
     setError('')
     try {
@@ -66,12 +100,20 @@ export default function ExpenseForm({ initial, onSave, onCancel, saveLabel = '�
         storeName: storeName || '未知店家',
         storeNameJa,
         items,
-        amountJPY: amount,
+        amountJPY: converted.amountJPY,
         category,
         paymentMethod,
         paidBy,
         notes,
         createdAt: initial?.createdAt ?? new Date().toISOString(),
+        inputAmount: parsedInput,
+        inputCurrency: currency,
+        exchangeRateUsed: rate,
+        baseAmountTWD: converted.baseAmountTWD,
+        cardId: selectedCard?.id,
+        cardFeeRate: feeRate,
+        cardCashbackRate: cashbackRate,
+        totalBaseAmountTWD,
       })
     } catch (err) {
       setError(String(err))
@@ -95,14 +137,35 @@ export default function ExpenseForm({ initial, onSave, onCancel, saveLabel = '�
             className="input" required />
         </div>
         <div>
-          <label className="label">金額（JPY）</label>
-          <div className="relative">
-            <span className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400 font-semibold">¥</span>
-            <input type="number" inputMode="numeric" min="1" value={amountJPY}
-              autoFocus={autoFocusAmount}
-              onChange={e => setAmountJPY(e.target.value)}
-              placeholder="0" className="input pl-7 text-lg font-semibold" required />
+          <div className="flex items-center justify-between">
+            <label className="label mb-0">金額</label>
+            <div className="flex rounded-lg border border-gray-200 p-0.5 text-xs">
+              <button type="button" onClick={() => setIsBaseCurrency(false)}
+                className={`rounded-md px-2 py-0.5 font-medium transition ${!isBaseCurrency ? 'bg-red-600 text-white' : 'text-gray-500'}`}>
+                日幣
+              </button>
+              <button type="button" onClick={() => setIsBaseCurrency(true)}
+                className={`rounded-md px-2 py-0.5 font-medium transition ${isBaseCurrency ? 'bg-red-600 text-white' : 'text-gray-500'}`}>
+                台幣
+              </button>
+            </div>
           </div>
+          <div className="relative mt-1.5">
+            <span className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400 font-semibold">
+              {isBaseCurrency ? 'NT$' : '¥'}
+            </span>
+            <input type="number" inputMode="decimal" min="0" step="any" value={inputAmount}
+              autoFocus={autoFocusAmount}
+              onChange={e => setInputAmount(e.target.value)}
+              placeholder="0" className="input pl-9 text-lg font-semibold" required />
+          </div>
+          {parsedInput > 0 && (
+            <p className="mt-1 text-right text-xs text-gray-400">
+              {isBaseCurrency
+                ? `≈ ¥${converted.amountJPY.toLocaleString()}`
+                : `≈ NT$ ${converted.baseAmountTWD.toLocaleString()}`}
+            </p>
+          )}
         </div>
       </div>
 
@@ -147,6 +210,31 @@ export default function ExpenseForm({ initial, onSave, onCancel, saveLabel = '�
           ))}
         </div>
       </div>
+
+      {/* Credit card selector + fee/cashback preview */}
+      {paymentMethod === '信用卡' && settings.cardSettings.length > 0 && (
+        <div>
+          <label className="label">選擇信用卡</label>
+          <div className="flex gap-2 flex-wrap">
+            {settings.cardSettings.map(card => (
+              <button key={card.id} type="button" onClick={() => setCardId(card.id)}
+                className={`rounded-xl border-2 px-4 py-2 text-sm font-medium transition-all ${
+                  cardId === card.id
+                    ? 'border-blue-500 bg-blue-50 text-blue-700'
+                    : 'border-gray-100 bg-gray-50 text-gray-600 hover:border-gray-200'
+                }`}>
+                {card.name}
+              </button>
+            ))}
+          </div>
+          {selectedCard && parsedInput > 0 && (
+            <p className="mt-2 text-xs text-gray-500">
+              預估帳單扣款：NT$ {cardTotalPreview.toLocaleString()}
+              （已含 {(selectedCard.feeRate * 100).toFixed(1)}% 手續費，並扣除 {(selectedCard.cashbackRate * 100).toFixed(1)}% 回饋）
+            </p>
+          )}
+        </div>
+      )}
 
       {/* Payer */}
       {settings.people.length > 0 && (

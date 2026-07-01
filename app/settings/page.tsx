@@ -4,8 +4,11 @@ import { useState } from 'react'
 import { useRouter } from 'next/navigation'
 import PageShell from '../components/layout/PageShell'
 import { loadSettings, saveSettings } from '@/lib/settings'
-import { Trip } from '@/lib/types'
+import { Trip, CardSetting } from '@/lib/types'
 import { today } from '@/lib/utils'
+
+/** Decimal rate (0.015) → percent for display, rounded to avoid floating-point noise (e.g. 1.4999999999999998). */
+const pct = (n: number) => Math.round(n * 10000) / 100
 
 export default function SettingsPage() {
   const router = useRouter()
@@ -61,6 +64,22 @@ export default function SettingsPage() {
     update('people', updated)
   }
 
+  /* ── Credit cards ── */
+  function updateCard(id: string, patch: Partial<CardSetting>) {
+    setS(prev => ({ ...prev, cardSettings: prev.cardSettings.map(c => c.id === id ? { ...c, ...patch } : c) }))
+    setSaved(false)
+  }
+  function addCard() {
+    const id = 'card-' + Date.now()
+    setS(prev => ({ ...prev, cardSettings: [...prev.cardSettings, { id, name: '新卡片', feeRate: 0, cashbackRate: 0 }] }))
+    setSaved(false)
+  }
+  function removeCard(id: string) {
+    if (!confirm('刪除這張卡片？')) return
+    setS(prev => ({ ...prev, cardSettings: prev.cardSettings.filter(c => c.id !== id) }))
+    setSaved(false)
+  }
+
   function handleSave(e: React.FormEvent) {
     e.preventDefault()
     const exchangeRateJPYtoTWD = Math.max(0.001, parseFloat(rateText) || 0.001)
@@ -70,7 +89,13 @@ export default function SettingsPage() {
       tripDays: Math.min(60, Math.max(1, t.tripDays || 1)),
       budgetJPY: Math.max(0, t.budgetJPY || 0),
     }))
-    const final = { ...s, exchangeRateJPYtoTWD, trips }
+    const cardSettings = s.cardSettings.map(c => ({
+      ...c,
+      name: c.name.trim() || '信用卡',
+      feeRate: Math.max(0, c.feeRate || 0),
+      cashbackRate: Math.max(0, c.cashbackRate || 0),
+    }))
+    const final = { ...s, exchangeRateJPYtoTWD, trips, cardSettings }
     setS(final)
     setRateText(String(exchangeRateJPYtoTWD))
     saveSettings(final)
@@ -152,6 +177,46 @@ export default function SettingsPage() {
               目前設定：¥100 ≈ NT${((parseFloat(rateText) || 0) * 100).toFixed(1)}
             </p>
           </div>
+        </section>
+
+        {/* Credit cards */}
+        <section className="rounded-2xl bg-white p-5 shadow-sm ring-1 ring-gray-100 space-y-4">
+          <h2 className="text-sm font-semibold text-gray-700">💳 信用卡</h2>
+          <p className="text-xs text-gray-400 -mt-2">
+            設定海外刷卡手續費與回饋比例，記帳選「信用卡」時會即時算出預估帳單扣款。
+          </p>
+
+          {s.cardSettings.map(card => (
+            <div key={card.id} className="rounded-xl border-2 border-gray-100 p-3 space-y-3">
+              <div className="flex items-center gap-2">
+                <input value={card.name} onChange={e => updateCard(card.id, { name: e.target.value })}
+                  placeholder="卡片名稱" className="input flex-1" />
+                <button type="button" onClick={() => removeCard(card.id)}
+                  className="shrink-0 rounded-xl border border-gray-200 px-3 py-2.5 text-sm text-gray-400 hover:border-red-200 hover:text-red-500 transition">
+                  🗑
+                </button>
+              </div>
+              <div className="grid grid-cols-2 gap-3">
+                <div>
+                  <label className="label">手續費 %</label>
+                  <input type="number" inputMode="decimal" step="0.1" min="0" value={pct(card.feeRate)}
+                    onChange={e => updateCard(card.id, { feeRate: (parseFloat(e.target.value) || 0) / 100 })}
+                    className="input" />
+                </div>
+                <div>
+                  <label className="label">回饋 %</label>
+                  <input type="number" inputMode="decimal" step="0.1" min="0" value={pct(card.cashbackRate)}
+                    onChange={e => updateCard(card.id, { cashbackRate: (parseFloat(e.target.value) || 0) / 100 })}
+                    className="input" />
+                </div>
+              </div>
+            </div>
+          ))}
+
+          <button type="button" onClick={addCard}
+            className="w-full rounded-xl border-2 border-dashed border-gray-200 py-2.5 text-sm font-semibold text-gray-500 hover:border-gray-300 transition">
+            + 新增信用卡
+          </button>
         </section>
 
         {/* People */}

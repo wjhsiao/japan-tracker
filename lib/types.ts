@@ -15,6 +15,16 @@ export type PaymentMethod = '現金' | '信用卡' | 'Suica' | 'PayPay' | '其�
 
 export type TaxType = '内税' | '外税' | '免税'
 
+export type Currency = 'JPY' | 'TWD'
+
+/** A credit card's overseas-transaction fee and cashback rates (e.g. 0.015 = 1.5%). */
+export interface CardSetting {
+  id: string
+  name: string
+  feeRate: number
+  cashbackRate: number
+}
+
 export interface ExpenseItem {
   nameTw: string
   nameJa: string
@@ -35,12 +45,26 @@ export interface Expense {
   storeName: string
   storeNameJa: string
   items: ExpenseItem[]
+  /** Always the JPY-equivalent total — authoritative for budgets/sums/GAS export regardless of input currency. */
   amountJPY: number
   category: Category
   paymentMethod: PaymentMethod
   paidBy: string
   notes: string
   createdAt: string
+  /** Raw amount as typed by the user, in inputCurrency (dual-currency input) */
+  inputAmount?: number
+  inputCurrency?: Currency
+  /** JPY→TWD rate applied at save time */
+  exchangeRateUsed?: number
+  /** Converted TWD amount (main currency) */
+  baseAmountTWD?: number
+  /** Credit card used, if paymentMethod === '信用卡' */
+  cardId?: string
+  cardFeeRate?: number
+  cardCashbackRate?: number
+  /** baseAmountTWD × (1 + cardFeeRate − cardCashbackRate) */
+  totalBaseAmountTWD?: number
 }
 
 export interface OcrResult {
@@ -71,6 +95,8 @@ export interface Settings {
   /** Trips, each defined by a date range — expenses are grouped by which trip's range their date falls in */
   trips: Trip[]
   activeTripId: string
+  /** Credit cards available in the payment-method card selector (fee/cashback rates) */
+  cardSettings: CardSetting[]
 }
 
 export const DEFAULT_TRIP_ID = 'trip-default'
@@ -99,6 +125,11 @@ export const PAYMENT_COLORS: Record<PaymentMethod, string> = {
   其他:   'bg-gray-100 text-gray-700 border-gray-200',
 }
 
+export const DEFAULT_CARD_SETTINGS: CardSetting[] = [
+  { id: 'card-no-fee', name: '海外無手續費卡', feeRate: 0, cashbackRate: 0.03 },
+  { id: 'card-standard', name: '一般信用卡', feeRate: 0.015, cashbackRate: 0.01 },
+]
+
 export const DEFAULT_SETTINGS: Settings = {
   exchangeRateJPYtoTWD: 0.22,
   people: ['Person 1', 'Person 2'],
@@ -107,4 +138,5 @@ export const DEFAULT_SETTINGS: Settings = {
     { id: DEFAULT_TRIP_ID, name: '我的旅程', startDate: today(), tripDays: 7, budgetJPY: 150000 },
   ],
   activeTripId: DEFAULT_TRIP_ID,
+  cardSettings: DEFAULT_CARD_SETTINGS,
 }
