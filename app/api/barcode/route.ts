@@ -17,8 +17,10 @@ export async function GET(req: NextRequest) {
   let productStatus = 0
   let productBody: unknown = null
 
+  const rakutenHeaders = { Referer: 'https://japan-tracker-iota.vercel.app' }
+
   try {
-    const res = await fetch(productUrl.toString(), { cache: 'no-store' })
+    const res = await fetch(productUrl.toString(), { cache: 'no-store', headers: rakutenHeaders })
     productStatus = res.status
     productBody = await res.json()
     if (res.ok) {
@@ -49,7 +51,7 @@ export async function GET(req: NextRequest) {
   let itemBody: unknown = null
 
   try {
-    const res = await fetch(itemUrl.toString(), { cache: 'no-store' })
+    const res = await fetch(itemUrl.toString(), { cache: 'no-store', headers: rakutenHeaders })
     itemStatus = res.status
     itemBody = await res.json()
     if (res.ok) {
