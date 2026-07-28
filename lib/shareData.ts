@@ -43,6 +43,7 @@ export interface TripRecap {
   biggestDay: { date: string; amount: number } | null
   biggestItem: { name: string; amount: number } | null
   categoryBars: CategoryBar[]
+  byPerson: { name: string; amount: number; amountTWD: number; pct: number }[]
 }
 
 /** Solid bar fill per category index (parallel to CATEGORIES order). */
@@ -87,6 +88,18 @@ export function buildTripRecap(expenses: Expense[], trip: Trip, settings: Settin
   for (const e of items) if (!top || e.amountJPY > top.amountJPY) top = e
   const biggestItem = top ? { name: top.storeName || top.category, amount: top.amountJPY } : null
 
+  // Per-person aggregation
+  const byPersonMap = new Map<string, number>()
+  for (const e of items) byPersonMap.set(e.paidBy, (byPersonMap.get(e.paidBy) ?? 0) + e.amountJPY)
+  const byPerson = [...byPersonMap.entries()]
+    .map(([name, amount]) => ({
+      name,
+      amount,
+      amountTWD: Math.round(amount * settings.exchangeRateJPYtoTWD),
+      pct: total > 0 ? Math.round((amount / total) * 100) : 0,
+    }))
+    .sort((a, b) => b.amount - a.amount)
+
   return {
     name: trip.name,
     total,
@@ -98,6 +111,7 @@ export function buildTripRecap(expenses: Expense[], trip: Trip, settings: Settin
     biggestDay,
     biggestItem,
     categoryBars: categoryBars.slice(0, 5),
+    byPerson,
   }
 }
 

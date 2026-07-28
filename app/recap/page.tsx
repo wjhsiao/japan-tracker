@@ -7,7 +7,7 @@ import { useExpenses } from '@/lib/useExpenses'
 import { loadSettings, getActiveTrip, tripEndDate } from '@/lib/settings'
 import { buildTripRecap } from '@/lib/shareData'
 import { exportCard } from '@/lib/shareExport'
-import { compressImage, prettyRange } from '@/lib/utils'
+import { compressImage, prettyRange, formatDate } from '@/lib/utils'
 
 export default function RecapPage() {
   const { expenses, loading } = useExpenses()
@@ -59,6 +59,89 @@ export default function RecapPage() {
           </div>
         ) : (
           <>
+            {/* Detailed stats */}
+            <div className="rounded-2xl bg-white p-5 shadow-sm ring-1 ring-gray-100 space-y-5">
+              {/* Total */}
+              <div>
+                <p className="text-xs text-gray-400">{trip.name} · {period}</p>
+                <p className="mt-1 text-3xl font-bold text-gray-900">¥{recap.total.toLocaleString()}</p>
+                <p className="text-sm text-gray-400">NT${recap.totalTWD.toLocaleString()}</p>
+              </div>
+
+              {/* Key metrics */}
+              <div className="grid grid-cols-3 gap-2 text-center">
+                {[
+                  { label: '天數', value: `${recap.days} 天` },
+                  { label: '筆數', value: `${recap.count} 筆` },
+                  { label: '日均', value: `¥${recap.dailyAvg.toLocaleString()}` },
+                ].map(({ label, value }) => (
+                  <div key={label} className="rounded-xl bg-gray-50 p-3">
+                    <p className="text-xs text-gray-400">{label}</p>
+                    <p className="mt-1 text-sm font-bold text-gray-900">{value}</p>
+                  </div>
+                ))}
+              </div>
+
+              {/* Per person */}
+              {recap.byPerson.length > 0 && (
+                <div>
+                  <p className="text-xs font-semibold text-gray-500 mb-2">💳 各人花費</p>
+                  <div className="space-y-2.5">
+                    {recap.byPerson.map(p => (
+                      <div key={p.name} className="flex items-center gap-3">
+                        <p className="w-16 shrink-0 text-sm font-medium text-gray-700 truncate">{p.name}</p>
+                        <div className="flex-1 h-2 rounded-full bg-gray-100 overflow-hidden">
+                          <div className="h-full rounded-full bg-red-400 transition-all" style={{ width: `${p.pct}%` }} />
+                        </div>
+                        <div className="text-right shrink-0">
+                          <p className="text-sm font-semibold text-gray-800">¥{p.amount.toLocaleString()}</p>
+                          <p className="text-xs text-gray-400">NT${p.amountTWD.toLocaleString()}</p>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              )}
+
+              {/* Category breakdown */}
+              {recap.categoryBars.length > 0 && (
+                <div>
+                  <p className="text-xs font-semibold text-gray-500 mb-2">📊 消費類別</p>
+                  <div className="space-y-2">
+                    {recap.categoryBars.map(c => (
+                      <div key={c.label} className="flex items-center gap-3">
+                        <p className="w-20 shrink-0 text-xs text-gray-600 truncate">{c.emoji} {c.label}</p>
+                        <div className="flex-1 h-2 rounded-full bg-gray-100 overflow-hidden">
+                          <div className={`h-full rounded-full ${c.colorClass} transition-all`} style={{ width: `${c.pct}%` }} />
+                        </div>
+                        <p className="text-xs text-gray-500 shrink-0 w-8 text-right">{c.pct}%</p>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              )}
+
+              {/* Highlights */}
+              <div className="grid grid-cols-2 gap-3">
+                {recap.biggestDay && (
+                  <div className="rounded-xl bg-orange-50 p-3">
+                    <p className="text-xs font-medium text-orange-600">🔥 最貴一天</p>
+                    <p className="mt-1 text-sm font-bold text-gray-800">{formatDate(recap.biggestDay.date)}</p>
+                    <p className="text-xs text-gray-500">¥{recap.biggestDay.amount.toLocaleString()}</p>
+                  </div>
+                )}
+                {recap.biggestItem && (
+                  <div className="rounded-xl bg-purple-50 p-3">
+                    <p className="text-xs font-medium text-purple-600">💸 最大單筆</p>
+                    <p className="mt-1 text-sm font-bold text-gray-800 truncate">{recap.biggestItem.name}</p>
+                    <p className="text-xs text-gray-500">¥{recap.biggestItem.amount.toLocaleString()}</p>
+                  </div>
+                )}
+              </div>
+            </div>
+
+            {/* Share card */}
+            <p className="text-xs font-semibold text-gray-400 px-1">📤 分享卡片</p>
             <RecapCard ref={cardRef} recap={recap} period={period} photoUrl={photoUrl} />
 
             <input ref={fileRef} type="file" accept="image/*" className="hidden"

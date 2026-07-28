@@ -1,10 +1,10 @@
 'use client'
 
-import { useState } from 'react'
+import { useRef, useState } from 'react'
 import { useRouter } from 'next/navigation'
 import PageShell from '../components/layout/PageShell'
 import { loadSettings, saveSettings } from '@/lib/settings'
-import { Trip, CardSetting } from '@/lib/types'
+import { Trip, CardSetting, DEFAULT_SETTINGS } from '@/lib/types'
 import { today } from '@/lib/utils'
 import { pct } from '@/lib/currency'
 
@@ -14,6 +14,33 @@ export default function SettingsPage() {
   const [saved, setSaved] = useState(false)
   const [newPerson, setNewPerson] = useState('')
   const [rateText, setRateText] = useState(String(s.exchangeRateJPYtoTWD))
+  const backupRef = useRef<HTMLInputElement>(null)
+
+  function handleExportBackup() {
+    const data = loadSettings()
+    const blob = new Blob([JSON.stringify(data, null, 2)], { type: 'application/json' })
+    const url = URL.createObjectURL(blob)
+    const a = document.createElement('a')
+    a.href = url
+    a.download = `japan-tracker-backup-${new Date().toISOString().slice(0, 10)}.json`
+    a.click()
+    URL.revokeObjectURL(url)
+  }
+
+  function handleImportBackup(file: File) {
+    const reader = new FileReader()
+    reader.onload = e => {
+      try {
+        const data = JSON.parse(e.target?.result as string)
+        if (!data.trips || !data.people) throw new Error('格式錯誤')
+        saveSettings({ ...DEFAULT_SETTINGS, ...data })
+        if (confirm('還原成功，重新整理頁面套用設定？')) window.location.reload()
+      } catch {
+        alert('還原失敗：請確認為本 App 匯出的備份檔案')
+      }
+    }
+    reader.readAsText(file)
+  }
 
   function update<K extends keyof typeof s>(k: K, v: typeof s[K]) {
     setS(prev => ({ ...prev, [k]: v }))
@@ -252,6 +279,26 @@ export default function SettingsPage() {
               此密碼用於保護收據掃描與資料讀取。請輸入與部署環境變數 <code className="text-gray-500">ACCESS_CODE</code> 相同的字串。兩位使用者需各自在自己的手機輸入同一組密碼。
             </p>
           </div>
+        </section>
+
+        {/* Backup / Restore */}
+        <section className="rounded-2xl bg-white p-5 shadow-sm ring-1 ring-gray-100 space-y-4">
+          <h2 className="text-sm font-semibold text-gray-700">💾 備份與還原</h2>
+          <p className="text-xs text-gray-400 -mt-2">
+            備份旅程、匯率、成員、信用卡等設定（不含消費紀錄）。
+          </p>
+          <div className="flex gap-3">
+            <button type="button" onClick={handleExportBackup}
+              className="flex-1 rounded-xl bg-gray-100 py-2.5 text-sm font-semibold text-gray-700 hover:bg-gray-200 transition">
+              📥 匯出備份
+            </button>
+            <button type="button" onClick={() => backupRef.current?.click()}
+              className="flex-1 rounded-xl border border-gray-200 py-2.5 text-sm font-semibold text-gray-600 hover:bg-gray-50 transition">
+              📤 匯入還原
+            </button>
+          </div>
+          <input ref={backupRef} type="file" accept=".json" className="hidden"
+            onChange={e => { const f = e.target.files?.[0]; if (f) handleImportBackup(f); e.target.value = '' }} />
         </section>
 
         <button type="submit"
