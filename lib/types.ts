@@ -130,6 +130,20 @@ export const DEFAULT_CARD_SETTINGS: CardSetting[] = [
   { id: 'card-standard', name: '一般信用卡', feeRate: 0.015, cashbackRate: 0.01 },
 ]
 
+export interface PriceCheck {
+  id: string
+  barcode: string
+  productName: string
+  price: number
+  storeName: string
+  lat?: number
+  lng?: number
+  mapsUrl?: string
+  date: string
+  createdAt: string
+  purchased: boolean
+}
+
 export const DEFAULT_SETTINGS: Settings = {
   exchangeRateJPYtoTWD: 0.22,
   people: ['Person 1', 'Person 2'],

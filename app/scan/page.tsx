@@ -7,6 +7,7 @@ import ExpenseForm from '../components/expenses/ExpenseForm'
 import { OcrResult } from '@/lib/types'
 import { addExpense } from '@/lib/gas'
 import { invalidateExpensesCache } from '@/lib/useExpenses'
+import Link from 'next/link'
 import { compressImage, fetchWithTimeout, formatJPY, today } from '@/lib/utils'
 import { loadSettings } from '@/lib/settings'
 import { Expense } from '@/lib/types'
@@ -113,6 +114,12 @@ export default function ScanPage() {
             >
               📸 拍攝收據
             </button>
+            <Link
+              href="/barcode"
+              className="w-full rounded-2xl border-2 border-gray-200 py-4 font-semibold text-gray-600 text-center hover:bg-gray-50 transition active:scale-95"
+            >
+              🔍 條碼比價
+            </Link>
           </div>
         </div>
       )}
