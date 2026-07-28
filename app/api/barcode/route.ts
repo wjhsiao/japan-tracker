@@ -4,8 +4,8 @@ export async function GET(req: NextRequest) {
   const barcode = req.nextUrl.searchParams.get('barcode')
   if (!barcode) return Response.json({ error: 'barcode required' }, { status: 400 })
 
-  // Try Open Food Facts (free, no key required)
-  const url = `https://world.openfoodfacts.org/api/v2/product/${encodeURIComponent(barcode)}.json?fields=product_name,product_name_ja,brands,image_url`
+  // Open Food Facts v0 (free, no key, returns 200 always with status 0/1)
+  const url = `https://world.openfoodfacts.org/api/v0/product/${encodeURIComponent(barcode)}.json`
 
   try {
     const res = await fetch(url, {
