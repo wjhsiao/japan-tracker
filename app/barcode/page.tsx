@@ -58,6 +58,7 @@ export default function BarcodePage() {
 
   // history + edit
   const [allChecks, setAllChecks] = useState<PriceCheck[]>([])
+  const [searchQuery, setSearchQuery] = useState('')
   const [editingRecord, setEditingRecord] = useState<PriceCheck | null>(null)
   const [editProductName, setEditProductName] = useState('')
   const [editStoreName, setEditStoreName] = useState('')
@@ -458,39 +459,91 @@ export default function BarcodePage() {
 
       {/* ── History ── */}
       {view === 'history' && (
-        <div className="space-y-3 px-4">
+        <div className="flex flex-col gap-3 px-4">
+          {/* Search bar */}
+          <div className="relative">
+            <input
+              type="text"
+              value={searchQuery}
+              onChange={e => setSearchQuery(e.target.value)}
+              placeholder="搜尋品名或條碼"
+              className="input w-full pr-9"
+            />
+            {searchQuery && (
+              <button
+                onClick={() => setSearchQuery('')}
+                className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600"
+              >
+                ✕
+              </button>
+            )}
+          </div>
+
           {allChecks.length === 0 ? (
-            <div className="flex flex-col items-center py-20 text-center">
+            <div className="flex flex-col items-center py-16 text-center">
               <p className="text-4xl">🏷️</p>
               <p className="mt-3 text-gray-500">還沒有掃描紀錄</p>
             </div>
-          ) : allChecks.map(pc => (
-            <div key={pc.id} className="rounded-2xl bg-white p-4 shadow-sm ring-1 ring-gray-100">
-              <div className="flex items-start justify-between gap-3">
-                <div className="flex-1 min-w-0">
-                  <p className="text-sm font-medium leading-tight text-gray-800">{pc.productName}</p>
-                  <p className="mt-0.5 text-xs text-gray-500">{pc.storeName} · {pc.date}</p>
-                  <p className="mt-0.5 font-mono text-xs text-gray-300">{pc.barcode}</p>
+          ) : (() => {
+            const lowerQ = searchQuery.toLowerCase()
+            const grouped = new Map<string, PriceCheck[]>()
+            for (const pc of allChecks) {
+              if (lowerQ && !pc.barcode.toLowerCase().includes(lowerQ) && !pc.productName.toLowerCase().includes(lowerQ)) continue
+              const arr = grouped.get(pc.barcode) ?? []
+              arr.push(pc)
+              grouped.set(pc.barcode, arr)
+            }
+            for (const [, arr] of grouped) arr.sort((a, b) => a.price - b.price)
+
+            if (grouped.size === 0) {
+              return (
+                <div className="flex flex-col items-center py-16 text-center">
+                  <p className="text-2xl">🔍</p>
+                  <p className="mt-2 text-sm text-gray-500">找不到符合的紀錄</p>
                 </div>
-                <div className="shrink-0 text-right">
-                  <p className="font-bold text-gray-900">{formatJPY(pc.price)}</p>
-                  {pc.purchased && <p className="text-xs font-medium text-green-600">已購買</p>}
+              )
+            }
+
+            return Array.from(grouped.entries()).map(([barcode, records]) => {
+              const displayName = records.find(r => r.productName !== barcode)?.productName ?? barcode
+              return (
+                <div key={barcode} className="overflow-hidden rounded-2xl bg-white shadow-sm ring-1 ring-gray-100">
+                  <div className="px-4 pt-4 pb-2">
+                    <p className="text-sm font-semibold text-gray-800 leading-tight">{displayName}</p>
+                    {displayName !== barcode && (
+                      <p className="font-mono text-xs text-gray-300 mt-0.5">{barcode}</p>
+                    )}
+                  </div>
+                  <div className="divide-y divide-gray-50">
+                    {records.map((pc, i) => (
+                      <div key={pc.id} className="flex items-center gap-3 px-4 py-3">
+                        <div className="flex-1 min-w-0">
+                          <p className="text-sm font-medium text-gray-800 truncate">{pc.storeName}</p>
+                          <p className="text-xs text-gray-400">{pc.date}{pc.purchased ? ' · 已購買' : ''}</p>
+                        </div>
+                        <div className="flex items-center gap-2 flex-shrink-0">
+                          {i === 0 && (
+                            <span className="rounded-full bg-green-100 px-2 py-0.5 text-xs font-semibold text-green-700">最低</span>
+                          )}
+                          <p className={`font-semibold text-sm ${i === 0 ? 'text-green-700' : 'text-gray-800'}`}>
+                            {formatJPY(pc.price)}
+                          </p>
+                          {pc.mapsUrl && (
+                            <a href={pc.mapsUrl} target="_blank" rel="noopener noreferrer"
+                              className="text-base leading-none">📍</a>
+                          )}
+                          <button onClick={() => startEdit(pc)}
+                            className="text-xs font-medium text-gray-400 hover:text-gray-700 transition">
+                            編輯
+                          </button>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
                 </div>
-              </div>
-              <div className="mt-2 flex items-center justify-between">
-                {pc.mapsUrl
-                  ? <a href={pc.mapsUrl} target="_blank" rel="noopener noreferrer"
-                      className="inline-flex items-center gap-1 text-xs text-blue-500 hover:text-blue-700">
-                      📍 在 Google Maps 查看
-                    </a>
-                  : <span />}
-                <button onClick={() => startEdit(pc)}
-                  className="text-xs font-medium text-gray-400 hover:text-gray-700 transition">
-                  編輯
-                </button>
-              </div>
-            </div>
-          ))}
+              )
+            })
+          })()}
         </div>
       )}
 

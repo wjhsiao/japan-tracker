@@ -1,18 +1,30 @@
 'use client'
 
-import Link from 'next/link'
 import PageShell from '../components/layout/PageShell'
 import PieChart, { COLORS } from '../components/ui/PieChart'
 import { CATEGORIES, PAYMENT_METHODS } from '@/lib/types'
 import { useExpenses } from '@/lib/useExpenses'
-import { loadSettings, getActiveTrip, expensesInTrip } from '@/lib/settings'
-import { formatJPY, formatTWD, sumJPY, groupByDate } from '@/lib/utils'
+import { loadSettings, getActiveTrip, expensesInTrip, tripEndDate } from '@/lib/settings'
+import { formatJPY, formatTWD, sumJPY, groupByDate, prettyRange } from '@/lib/utils'
+import { buildTripRecap } from '@/lib/shareData'
 
 export default function StatsPage() {
   const { expenses: allExpenses, loading, error, refresh } = useExpenses()
   const settings = loadSettings()
   const trip = getActiveTrip(settings)
   const expenses = expensesInTrip(allExpenses, trip)
+  const recap = buildTripRecap(expenses, trip, settings)
+  const period = trip.startDate ? prettyRange(trip.startDate, tripEndDate(trip)) : ''
+
+  const storeFreq = new Map<string, number>()
+  for (const e of expenses) {
+    if (e.storeName) storeFreq.set(e.storeName, (storeFreq.get(e.storeName) ?? 0) + 1)
+  }
+  let topStore = ''
+  let topStoreCount = 0
+  for (const [name, count] of storeFreq) {
+    if (count > topStoreCount) { topStore = name; topStoreCount = count }
+  }
 
   const total = sumJPY(expenses)
 
@@ -67,28 +79,44 @@ export default function StatsPage() {
         </div>
       ) : (
         <div className="space-y-4 px-4">
-          {/* Trip recap CTA */}
-          <Link href="/recap"
-            className="flex items-center justify-between rounded-2xl bg-gradient-to-r from-red-600 to-rose-600 p-4 text-white shadow-sm transition active:scale-95">
-            <div>
-              <p className="font-semibold">📤 製作旅程回顧卡</p>
-              <p className="text-xs text-red-100">把這趟花費變成可分享的回顧</p>
+          {/* Trip summary */}
+          <div className="rounded-2xl bg-white p-5 shadow-sm ring-1 ring-gray-100 border-l-4 border-red-500">
+            <p className="text-xs text-gray-400 mb-1 truncate">
+              {trip.name}{period ? ` · ${period}` : ''}
+            </p>
+            <p className="text-3xl font-bold text-gray-900">{formatJPY(total)}</p>
+            <p className="text-sm text-gray-400 mb-4">{formatTWD(total, settings.exchangeRateJPYtoTWD)}</p>
+            <div className="grid grid-cols-3 gap-2 mb-3">
+              {[
+                { label: '天數', value: `${recap.days} 天` },
+                { label: '筆數', value: `${recap.count} 筆` },
+                { label: '日均', value: formatJPY(Math.round(recap.dailyAvg)) },
+              ].map(({ label, value }) => (
+                <div key={label} className="rounded-xl bg-gray-50 p-3 text-center">
+                  <p className="text-xs text-gray-400">{label}</p>
+                  <p className="mt-1 text-xs font-bold text-gray-800">{value}</p>
+                </div>
+              ))}
             </div>
-            <span className="text-xl">›</span>
-          </Link>
-
-          {/* Summary */}
-          <div className="grid grid-cols-2 gap-3">
-            <div className="rounded-2xl bg-white p-4 shadow-sm ring-1 ring-gray-100">
-              <p className="text-xs text-gray-500">總消費</p>
-              <p className="mt-0.5 text-xl font-bold text-gray-900">{formatJPY(total)}</p>
-              <p className="text-xs text-gray-400">{formatTWD(total, settings.exchangeRateJPYtoTWD)}</p>
-            </div>
-            <div className="rounded-2xl bg-white p-4 shadow-sm ring-1 ring-gray-100">
-              <p className="text-xs text-gray-500">消費筆數</p>
-              <p className="mt-0.5 text-xl font-bold text-gray-900">{expenses.length} 筆</p>
-              <p className="text-xs text-gray-400">共 {dailyTotals.length} 天</p>
-            </div>
+            {(recap.topCategory || topStore) && (
+              <div className="grid grid-cols-2 gap-2">
+                {recap.topCategory && (
+                  <div className="rounded-xl bg-gray-50 p-3">
+                    <p className="text-xs text-gray-400">最多消費</p>
+                    <p className="mt-1 text-xs font-semibold text-gray-800 truncate">
+                      {recap.topCategory.emoji} {recap.topCategory.name}
+                    </p>
+                    <p className="text-xs text-gray-400">{recap.topCategory.pct}%</p>
+                  </div>
+                )}
+                {topStore && (
+                  <div className="rounded-xl bg-gray-50 p-3">
+                    <p className="text-xs text-gray-400">最常光顧</p>
+                    <p className="mt-1 text-xs font-semibold text-gray-800 truncate">{topStore}</p>
+                  </div>
+                )}
+              </div>
+            )}
           </div>
 
           {/* Pie chart */}

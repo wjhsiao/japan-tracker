@@ -4,11 +4,11 @@ import Link from 'next/link'
 import { usePathname } from 'next/navigation'
 
 const NAV = [
-  { href: '/',         label: '總覽',  icon: HomeIcon },
-  { href: '/scan',     label: '掃描',  icon: CameraIcon },
-  { href: '/add',      label: '新增',  icon: PlusIcon },
-  { href: '/history',  label: '紀錄',  icon: ListIcon },
-  { href: '/stats',    label: '統計',  icon: ChartIcon },
+  { href: '/',        label: '總覽', icon: HomeIcon },
+  { href: '/barcode', label: '比價', icon: BarcodeIcon },
+  { href: '/scan',    label: '記帳', icon: ReceiptIcon },
+  { href: '/history', label: '紀錄', icon: ListIcon },
+  { href: '/stats',   label: '統計', icon: ChartIcon },
 ]
 
 export default function BottomNav() {
@@ -17,7 +17,10 @@ export default function BottomNav() {
     <nav className="fixed bottom-0 left-0 right-0 z-50 border-t border-gray-100 bg-white/95 backdrop-blur-sm pb-[env(safe-area-inset-bottom)]">
       <div className="mx-auto flex max-w-lg">
         {NAV.map(({ href, label, icon: Icon }) => {
-          const active = path === href
+          const active =
+            href === '/scan'
+              ? (path === '/scan' || path === '/add')
+              : path === href
           return (
             <Link
               key={href}
@@ -45,21 +48,21 @@ function HomeIcon({ className }: { className?: string }) {
   )
 }
 
-function CameraIcon({ className }: { className?: string }) {
+function BarcodeIcon({ className }: { className?: string }) {
   return (
     <svg className={className} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={1.8}>
-      <path strokeLinecap="round" strokeLinejoin="round" d="M23 19a2 2 0 0 1-2 2H3a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h4l2-3h6l2 3h4a2 2 0 0 1 2 2z" />
-      <circle cx="12" cy="13" r="4" strokeLinecap="round" strokeLinejoin="round" />
+      <path strokeLinecap="round" d="M4 6v12M7 6v12M10 6v12M13 6v12M17 6v12M20 6v12" />
+      <path strokeLinecap="round" strokeWidth={2.2} d="M2 5h1M21 5h1M2 19h1M21 19h1" />
     </svg>
   )
 }
 
-function PlusIcon({ className }: { className?: string }) {
+function ReceiptIcon({ className }: { className?: string }) {
   return (
     <svg className={className} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={1.8}>
-      <circle cx="12" cy="12" r="10" strokeLinecap="round" />
-      <line x1="12" y1="8" x2="12" y2="16" strokeLinecap="round" />
-      <line x1="8" y1="12" x2="16" y2="12" strokeLinecap="round" />
+      <path strokeLinecap="round" strokeLinejoin="round" d="M9 5H7a2 2 0 0 0-2 2v12a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2V7a2 2 0 0 0-2-2h-2" />
+      <rect x="9" y="3" width="6" height="4" rx="1" strokeLinecap="round" strokeLinejoin="round" />
+      <path strokeLinecap="round" d="M9 12h6M9 16h4" />
     </svg>
   )
 }
