@@ -25,8 +25,10 @@ function sanitizeOcr(raw: unknown, fallbackDate: string): OcrResult {
   }
 }
 
+const GEMINI_MODEL = 'gemini-3.1-flash-lite'
+const GEMINI_IS_THINKING = false
 const GEMINI_URL =
-  'https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent'
+  `https://generativelanguage.googleapis.com/v1beta/models/${GEMINI_MODEL}:generateContent`
 
 function buildSystemPrompt(today: string) { return `You are a Japanese receipt OCR assistant. Analyze this receipt image and extract information.
 
@@ -110,7 +112,7 @@ export async function POST(req: NextRequest) {
       temperature: 0.1,
       topP: 0.8,
       maxOutputTokens: 2048,
-      thinkingConfig: { thinkingBudget: 0 },
+      ...(GEMINI_IS_THINKING ? { thinkingConfig: { thinkingBudget: 0 } } : {}),
     },
   }
 
