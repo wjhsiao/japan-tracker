@@ -3,7 +3,7 @@
 import { useCallback, useEffect, useRef, useState } from 'react'
 import PageShell from '../components/layout/PageShell'
 import { PriceCheck } from '@/lib/types'
-import { loadPriceChecks, savePriceCheck, updatePriceCheck, getHistoryForBarcode } from '@/lib/priceCheck'
+import { loadPriceChecks, savePriceCheck, updatePriceCheck, deletePriceCheck, getHistoryForBarcode } from '@/lib/priceCheck'
 import { compressImage, formatJPY, today } from '@/lib/utils'
 import { v4 as uuidv4 } from 'uuid'
 
@@ -68,6 +68,7 @@ export default function BarcodePage() {
   const [editLng, setEditLng] = useState<number | undefined>(undefined)
   const [editLocationInput, setEditLocationInput] = useState('')
   const [editGpsState, setEditGpsState] = useState<GpsState>('idle')
+  const [editDeleteConfirm, setEditDeleteConfirm] = useState(false)
 
   // ── camera ──
   const stopCamera = useCallback(() => {
@@ -239,6 +240,7 @@ export default function BarcodePage() {
     setEditLng(pc.lng)
     setEditLocationInput('')
     setEditGpsState('idle')
+    setEditDeleteConfirm(false)
     setView('edit')
   }
 
@@ -567,6 +569,29 @@ export default function BarcodePage() {
               儲存
             </button>
           </div>
+
+          {!editDeleteConfirm ? (
+            <button onClick={() => setEditDeleteConfirm(true)}
+              className="w-full rounded-xl py-3 text-sm font-medium text-gray-400 hover:text-red-500 transition">
+              刪除此筆記錄
+            </button>
+          ) : (
+            <div className="flex gap-3">
+              <button onClick={() => setEditDeleteConfirm(false)}
+                className="flex-1 rounded-xl border border-gray-200 py-3 text-sm font-medium text-gray-500 hover:bg-gray-50 transition">
+                取消
+              </button>
+              <button onClick={() => {
+                if (!editingRecord) return
+                deletePriceCheck(editingRecord.id)
+                setAllChecks(loadPriceChecks())
+                setView('history')
+              }}
+                className="flex-1 rounded-xl bg-red-100 py-3 text-sm font-semibold text-red-600 hover:bg-red-200 transition active:scale-95">
+                確認刪除
+              </button>
+            </div>
+          )}
         </div>
       )}
     </PageShell>
