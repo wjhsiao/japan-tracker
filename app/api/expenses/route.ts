@@ -25,6 +25,8 @@ export async function GET(req: NextRequest) {
   }
   try {
     // Inject GAS token so doGet can verify (prevents direct GAS URL scraping)
+    // GAS doGet only exposes e.parameter — headers are inaccessible in GAS, so the token must go in the URL.
+    // It will appear in Vercel function logs; rotate periodically via Vercel env vars.
     const url = `${GAS_URL}?token=${encodeURIComponent(GAS_TOKEN)}`
     const res = await fetchWithTimeout(url, { cache: 'no-store', redirect: 'follow' })
     const data = await res.json()

@@ -5,6 +5,7 @@ import PageShell from '../components/layout/PageShell'
 import { PriceCheck } from '@/lib/types'
 import { loadPriceChecks, savePriceCheck, updatePriceCheck, deletePriceCheck, getHistoryForBarcode } from '@/lib/priceCheck'
 import { compressImage, formatJPY, today } from '@/lib/utils'
+import { loadSettings } from '@/lib/settings'
 import { v4 as uuidv4 } from 'uuid'
 
 type View = 'scan' | 'result' | 'history' | 'edit'
@@ -54,7 +55,6 @@ export default function BarcodePage() {
   // GPS (result view)
   const [gpsState, setGpsState] = useState<GpsState>('idle')
   const [gpsCoords, setGpsCoords] = useState<{ lat: number; lng: number } | null>(null)
-  const [gpsSkipped, setGpsSkipped] = useState(false)
 
   // history + edit
   const [allChecks, setAllChecks] = useState<PriceCheck[]>([])
@@ -85,6 +85,8 @@ export default function BarcodePage() {
     setStoreName('')
     setProductNameInput('')
     setLoadingProduct(true)
+    setGpsState('idle')
+    setGpsCoords(null)
     setView('result')
     setHistory(getHistoryForBarcode(barcode))
     try {
@@ -136,25 +138,6 @@ export default function BarcodePage() {
     if (view === 'history') setAllChecks(loadPriceChecks())
   }, [view])
 
-  // pre-fetch GPS on entering result view
-  useEffect(() => {
-    if (view !== 'result') return
-    let cancelled = false
-    setGpsState('loading')
-    setGpsCoords(null)
-    setGpsSkipped(false)
-    navigator.geolocation.getCurrentPosition(
-      (pos) => {
-        if (cancelled) return
-        setGpsCoords({ lat: pos.coords.latitude, lng: pos.coords.longitude })
-        setGpsState('ok')
-      },
-      () => { if (!cancelled) setGpsState('error') },
-      { timeout: 10000 },
-    )
-    return () => { cancelled = true }
-  }, [view])
-
   // ── GPS helpers ──
   function retryGps() {
     setGpsState('loading')
@@ -189,9 +172,13 @@ export default function BarcodePage() {
     setOcrLoading(true)
     try {
       const { base64, mimeType } = await compressImage(file, 800, 0.75)
+      const { accessCode } = loadSettings()
       const res = await fetch('/api/ocr-label', {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        headers: {
+          'Content-Type': 'application/json',
+          ...(accessCode ? { 'x-access-code': accessCode } : {}),
+        },
         body: JSON.stringify({ imageBase64: base64, mimeType }),
       })
       const data = await res.json()
@@ -342,11 +329,17 @@ export default function BarcodePage() {
         <div className="space-y-4 px-4">
           {/* GPS status */}
           <div className={`flex items-center gap-2 rounded-xl px-3 py-2.5 text-sm ${
-            gpsState === 'ok' ? 'bg-green-50 text-green-700' :
-            gpsState === 'error' && gpsSkipped ? 'bg-yellow-50 text-yellow-700' :
-            gpsState === 'error' ? 'bg-red-50 text-red-600' :
-            'bg-gray-50 text-gray-500'
+            gpsState === 'ok'      ? 'bg-green-50 text-green-700' :
+            gpsState === 'error'   ? 'bg-red-50 text-red-600' :
+            gpsState === 'loading' ? 'bg-gray-50 text-gray-500' :
+            'bg-gray-50 text-gray-400'
           }`}>
+            {gpsState === 'idle' && (
+              <>
+                <span className="flex-1 text-xs">不含位置</span>
+                <button onClick={retryGps} className="text-xs font-semibold text-blue-500 underline underline-offset-2">📍 抓位置</button>
+              </>
+            )}
             {gpsState === 'loading' && (
               <>
                 <div className="h-3.5 w-3.5 shrink-0 animate-spin rounded-full border-2 border-gray-300 border-t-gray-600" />
@@ -354,15 +347,12 @@ export default function BarcodePage() {
               </>
             )}
             {gpsState === 'ok' && <span>✅ 位置已取得</span>}
-            {gpsState === 'error' && !gpsSkipped && (
+            {gpsState === 'error' && (
               <>
                 <span className="flex-1">❌ 無法取得位置</span>
                 <button onClick={retryGps} className="font-semibold underline underline-offset-2">重試</button>
-                <span className="opacity-40">·</span>
-                <button onClick={() => setGpsSkipped(true)} className="font-semibold underline underline-offset-2">跳過</button>
               </>
             )}
-            {gpsState === 'error' && gpsSkipped && <span>⚠️ 此筆不含位置</span>}
           </div>
 
           {/* Product name */}

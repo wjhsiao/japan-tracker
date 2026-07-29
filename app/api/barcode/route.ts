@@ -32,7 +32,7 @@ export async function GET(req: NextRequest) {
           })
         }
       }
-    } catch {}
+    } catch (e) { console.error('[barcode] rakuten:', e) }
   }
 
   // 2. Open Food Facts v2 fallback
@@ -60,7 +60,7 @@ export async function GET(req: NextRequest) {
         }
       }
     }
-  } catch {}
+  } catch (e) { console.error('[barcode] openfoodfacts:', e) }
 
   // 3. Nothing found
   return Response.json({ found: false, source: 'none', productName: null, minPrice: null })

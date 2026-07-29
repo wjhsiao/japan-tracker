@@ -129,8 +129,8 @@ export async function POST(req: NextRequest) {
     }
 
     const data = await res.json()
-    // gemini-2.5-flash is a thinking model: collect all text parts (non-thought first,
-    // then thought as fallback) and join them so we don't miss the answer.
+    // Collect all non-thought text parts first; fall back to thought parts if present
+    // (guards against future model switches to thinking-mode variants).
     const parts: Array<{ thought?: boolean; text?: string }> =
       data.candidates?.[0]?.content?.parts ?? []
     const allText: string = [
