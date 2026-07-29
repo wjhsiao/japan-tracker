@@ -28,3 +28,8 @@ export function getHistoryForBarcode(barcode: string): PriceCheck[] {
     .filter(p => p.barcode === barcode)
     .sort((a, b) => a.price - b.price)
 }
+
+export function updatePriceCheck(id: string, updated: PriceCheck): void {
+  const all = loadPriceChecks().map(p => p.id === id ? updated : p)
+  localStorage.setItem(KEY, JSON.stringify(all))
+}
