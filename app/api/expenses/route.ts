@@ -1,8 +1,8 @@
 import { NextRequest } from 'next/server'
 import { fetchWithTimeout } from '@/lib/utils'
 
-// GAS URL: readable from both server and client (NEXT_PUBLIC_ prefix)
-const GAS_URL = process.env.NEXT_PUBLIC_APPS_SCRIPT_URL ?? ''
+// GAS URL: server-side only
+const GAS_URL = process.env.APPS_SCRIPT_URL ?? ''
 
 // Secret token: server-side only. Injected into every GAS request so Apps Script
 // can verify the caller (machine-to-machine secret).
@@ -39,7 +39,7 @@ export async function POST(req: NextRequest) {
     return Response.json({ error: 'Unauthorized' }, { status: 401 })
   }
   if (!GAS_URL) {
-    return Response.json({ error: 'NEXT_PUBLIC_APPS_SCRIPT_URL not configured' }, { status: 500 })
+    return Response.json({ error: 'APPS_SCRIPT_URL not configured' }, { status: 500 })
   }
   try {
     const body = await req.json()
