@@ -4,12 +4,12 @@ import { useCallback, useEffect, useRef, useState } from 'react'
 import PageShell from '../components/layout/PageShell'
 import { PriceCheck } from '@/lib/types'
 import { loadPriceChecks, savePriceCheck, getHistoryForBarcode } from '@/lib/priceCheck'
-import { formatJPY, today } from '@/lib/utils'
+import { compressImage, formatJPY, today } from '@/lib/utils'
 import { v4 as uuidv4 } from 'uuid'
 
 type View = 'scan' | 'result' | 'history'
 
-interface RakutenProduct {
+interface ApiProduct {
   found: boolean
   productName?: string
   minPrice?: number
@@ -25,17 +25,21 @@ export default function BarcodePage() {
   const rafRef = useRef<number>(0)
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const detectorRef = useRef<any>(null)
+  const ocrInputRef = useRef<HTMLInputElement>(null)
+  const priceInputRef = useRef<HTMLInputElement>(null)
 
   const [view, setView] = useState<View>('scan')
   const [cameraSupported, setCameraSupported] = useState(true)
   const [manualBarcode, setManualBarcode] = useState('')
 
   const [scannedBarcode, setScannedBarcode] = useState('')
-  const [product, setProduct] = useState<RakutenProduct | null>(null)
+  const [product, setProduct] = useState<ApiProduct | null>(null)
+  const [productNameInput, setProductNameInput] = useState('')
   const [currentPrice, setCurrentPrice] = useState('')
   const [storeName, setStoreName] = useState('')
   const [history, setHistory] = useState<PriceCheck[]>([])
   const [loadingProduct, setLoadingProduct] = useState(false)
+  const [ocrLoading, setOcrLoading] = useState(false)
   const [saving, setSaving] = useState(false)
 
   const [allChecks, setAllChecks] = useState<PriceCheck[]>([])
@@ -51,14 +55,16 @@ export default function BarcodePage() {
     setScannedBarcode(barcode)
     setCurrentPrice('')
     setStoreName('')
+    setProductNameInput('')
     setLoadingProduct(true)
     setView('result')
     setHistory(getHistoryForBarcode(barcode))
 
     try {
       const res = await fetch(`/api/barcode?barcode=${encodeURIComponent(barcode)}`)
-      const data: RakutenProduct = await res.json()
+      const data: ApiProduct = await res.json()
       setProduct(data)
+      setProductNameInput(data.productName ?? '')
     } catch {
       setProduct({ found: false })
     } finally {
@@ -108,6 +114,26 @@ export default function BarcodePage() {
     if (view === 'history') setAllChecks(loadPriceChecks())
   }, [view])
 
+  async function handleOcrPhoto(file: File) {
+    setOcrLoading(true)
+    try {
+      const { base64, mimeType } = await compressImage(file, 800, 0.75)
+      const res = await fetch('/api/ocr-label', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ imageBase64: base64, mimeType }),
+      })
+      const data = await res.json()
+      if (data.text) {
+        setProductNameInput(data.text)
+        setTimeout(() => priceInputRef.current?.focus(), 100)
+      }
+    } catch {}
+    finally {
+      setOcrLoading(false)
+    }
+  }
+
   async function handleSave(purchased: boolean) {
     if (!currentPrice || !storeName) return
     setSaving(true)
@@ -128,7 +154,7 @@ export default function BarcodePage() {
     const pc: PriceCheck = {
       id: uuidv4(),
       barcode: scannedBarcode,
-      productName: product?.productName ?? scannedBarcode,
+      productName: productNameInput || scannedBarcode,
       price: parseInt(currentPrice) || 0,
       storeName,
       lat,
@@ -227,10 +253,41 @@ export default function BarcodePage() {
                 <div className="h-4 w-4 animate-spin rounded-full border-2 border-gray-200 border-t-gray-500" />
                 查詢商品中…
               </div>
-            ) : product?.found ? (
-              <p className="mt-2 font-semibold leading-tight text-gray-800">{product.productName}</p>
             ) : (
-              <p className="mt-2 text-sm text-gray-500">查無商品，請手動輸入店名與價格</p>
+              <div className="mt-2">
+                <label className="label">品名</label>
+                <div className="flex gap-2">
+                  <input
+                    type="text"
+                    value={productNameInput}
+                    onChange={e => setProductNameInput(e.target.value)}
+                    placeholder="輸入或拍照辨識品名"
+                    className="input flex-1"
+                  />
+                  <button
+                    onClick={() => ocrInputRef.current?.click()}
+                    disabled={ocrLoading}
+                    title="拍照辨識品名"
+                    className="shrink-0 rounded-xl border border-gray-200 px-3 py-2.5 text-lg transition hover:bg-gray-50 active:scale-95 disabled:opacity-40"
+                  >
+                    {ocrLoading ? (
+                      <div className="h-4 w-4 animate-spin rounded-full border-2 border-gray-300 border-t-gray-600" />
+                    ) : '📷'}
+                  </button>
+                </div>
+                <input
+                  ref={ocrInputRef}
+                  type="file"
+                  accept="image/*"
+                  capture="environment"
+                  className="hidden"
+                  onChange={e => {
+                    const f = e.target.files?.[0]
+                    if (f) handleOcrPhoto(f)
+                    e.target.value = ''
+                  }}
+                />
+              </div>
             )}
           </div>
 
@@ -245,9 +302,15 @@ export default function BarcodePage() {
               <label className="label">現場售價（JPY）</label>
               <div className="relative">
                 <span className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400">¥</span>
-                <input type="number" inputMode="numeric" value={currentPrice}
+                <input
+                  ref={priceInputRef}
+                  type="number"
+                  inputMode="numeric"
+                  value={currentPrice}
                   onChange={e => setCurrentPrice(e.target.value)}
-                  placeholder="0" className="input pl-7" />
+                  placeholder="0"
+                  className="input pl-7"
+                />
               </div>
             </div>
           </div>
