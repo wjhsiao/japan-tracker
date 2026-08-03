@@ -1,5 +1,6 @@
 'use client'
 
+import Link from 'next/link'
 import PageShell from '../components/layout/PageShell'
 import PieChart, { COLORS } from '../components/ui/PieChart'
 import { CATEGORIES, PAYMENT_METHODS } from '@/lib/types'
@@ -123,15 +124,22 @@ export default function StatsPage() {
           <div className="rounded-2xl bg-white p-5 shadow-sm ring-1 ring-gray-100">
             <h2 className="mb-4 text-sm font-semibold text-gray-700">類別分布</h2>
             <PieChart slices={categorySlices} />
-            <div className="mt-4 space-y-1.5">
-              {categorySlices.map((s, i) => (
-                <div key={s.label} className="flex items-center justify-between text-sm">
+            <div className="mt-4 space-y-0.5">
+              {categorySlices.map((s) => (
+                <Link
+                  key={s.label}
+                  href={`/history?cat=${encodeURIComponent(s.label)}`}
+                  className="flex items-center justify-between text-sm rounded-lg px-2 py-1.5 -mx-2 hover:bg-gray-50 active:bg-gray-100 transition"
+                >
                   <span className="text-gray-600">{s.emoji} {s.label}</span>
-                  <div className="text-right">
+                  <div className="flex items-center gap-2">
                     <span className="font-semibold text-gray-800">{formatJPY(s.value)}</span>
-                    <span className="ml-2 text-xs text-gray-400">{((s.value / total) * 100).toFixed(0)}%</span>
+                    <span className="text-xs text-gray-400">{((s.value / total) * 100).toFixed(0)}%</span>
+                    <svg className="h-3.5 w-3.5 text-gray-300" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2}>
+                      <path strokeLinecap="round" strokeLinejoin="round" d="m9 18 6-6-6-6" />
+                    </svg>
                   </div>
-                </div>
+                </Link>
               ))}
             </div>
           </div>

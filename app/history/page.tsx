@@ -22,11 +22,17 @@ export default function HistoryPage() {
   const [showFilter, setShowFilter] = useState(false)
   const [photoIds, setPhotoIds] = useState<Set<string>>(new Set())
   const [exporting, setExporting] = useState(false)
+  const [searchText, setSearchText] = useState('')
   const settings = loadSettings()
   const trip = getActiveTrip(settings)
 
   useEffect(() => {
     getPhotoIds().then(ids => setPhotoIds(new Set(ids))).catch(() => {})
+  }, [])
+
+  useEffect(() => {
+    const cat = new URLSearchParams(window.location.search).get('cat') as Category | null
+    if (cat) setFilterCat(cat)
   }, [])
 
   async function handleDeleteFromSheet() {
@@ -73,12 +79,13 @@ export default function HistoryPage() {
     .filter(e => filterCat === 'all' || e.category === filterCat)
     .filter(e => filterPerson === 'all' || e.paidBy === filterPerson)
     .filter(e => filterPayment === 'all' || e.paymentMethod === filterPayment)
+    .filter(e => !searchText || e.storeName.toLowerCase().includes(searchText.toLowerCase()))
 
   const grouped = groupByDate(filtered)
   const categories = Array.from(new Set(tripExpenses.map(e => e.category)))
   const people = Array.from(new Set(tripExpenses.map(e => e.paidBy).filter(Boolean)))
   const paymentMethods = Array.from(new Set(tripExpenses.map(e => e.paymentMethod).filter(Boolean)))
-  const hasFilter = filterCat !== 'all' || filterPerson !== 'all' || filterPayment !== 'all'
+  const hasFilter = filterCat !== 'all' || filterPerson !== 'all' || filterPayment !== 'all' || !!searchText
 
   const chipCls = (active: boolean) =>
     `rounded-full px-3 py-1.5 text-xs font-medium border transition ${
@@ -124,6 +131,30 @@ export default function HistoryPage() {
         )}
       </div>
     }>
+      {/* Search bar */}
+      <div className="px-4 pb-3">
+        <div className="relative">
+          <svg className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-400" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2}>
+            <circle cx="11" cy="11" r="8" /><path strokeLinecap="round" d="m21 21-4.35-4.35" />
+          </svg>
+          <input
+            type="text"
+            value={searchText}
+            onChange={e => setSearchText(e.target.value)}
+            placeholder="搜尋店名…"
+            className="w-full rounded-xl bg-gray-100 py-2.5 pl-9 pr-9 text-sm text-gray-800 placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-red-400 focus:bg-white transition"
+          />
+          {searchText && (
+            <button onClick={() => setSearchText('')}
+              className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600">
+              <svg className="h-4 w-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2}>
+                <path strokeLinecap="round" d="M6 18 18 6M6 6l12 12" />
+              </svg>
+            </button>
+          )}
+        </div>
+      </div>
+
       {loading ? (
         <div className="flex h-40 items-center justify-center text-sm text-gray-400">載入中...</div>
       ) : error ? (
@@ -141,7 +172,7 @@ export default function HistoryPage() {
           <p className="mt-3 text-gray-500">{hasFilter ? '此篩選條件無資料' : '尚無消費紀錄'}</p>
           {hasFilter && (
             <button
-              onClick={() => { setFilterCat('all'); setFilterPerson('all'); setFilterPayment('all') }}
+              onClick={() => { setFilterCat('all'); setFilterPerson('all'); setFilterPayment('all'); setSearchText('') }}
               className="mt-3 text-sm font-medium text-red-600 hover:text-red-700"
             >
               清除篩選
@@ -342,7 +373,7 @@ export default function HistoryPage() {
 
               {hasFilter && (
                 <button
-                  onClick={() => { setFilterCat('all'); setFilterPerson('all'); setFilterPayment('all') }}
+                  onClick={() => { setFilterCat('all'); setFilterPerson('all'); setFilterPayment('all'); setSearchText('') }}
                   className="w-full mb-3 rounded-xl border border-gray-200 py-3 text-sm font-medium text-gray-500 hover:bg-gray-50 transition"
                 >
                   清除所有篩選

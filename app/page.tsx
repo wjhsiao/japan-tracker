@@ -5,9 +5,9 @@ import Link from 'next/link'
 import PageShell from './components/layout/PageShell'
 import CategoryBadge from './components/expenses/CategoryBadge'
 import { Settings } from '@/lib/types'
-import { loadSettings, saveSettings, getActiveTrip, expensesInTrip } from '@/lib/settings'
+import { loadSettings, saveSettings, getActiveTrip, expensesInTrip, tripEndDate } from '@/lib/settings'
 import { useExpenses } from '@/lib/useExpenses'
-import { formatJPY, formatTWD, formatDate, sumJPY, today, daysBetween } from '@/lib/utils'
+import { formatJPY, formatTWD, formatDate, sumJPY, today, daysBetween, prettyRange } from '@/lib/utils'
 
 export default function Dashboard() {
   const { expenses, loading, error, refresh } = useExpenses()
@@ -73,20 +73,25 @@ export default function Dashboard() {
       <div className="space-y-4 px-4">
         {/* Trip switcher */}
         {settings.trips.length > 1 ? (
-          <div className="flex gap-2 overflow-x-auto scrollbar-hide -mx-1 px-1">
-            {settings.trips.map(t => (
-              <button key={t.id} onClick={() => switchTrip(t.id)}
-                className={`shrink-0 rounded-full border px-3 py-1 text-xs font-medium transition ${
-                  t.id === trip.id
-                    ? 'border-red-500 bg-red-50 text-red-700'
-                    : 'border-gray-200 bg-white text-gray-500'
-                }`}>
-                {t.name}
-              </button>
-            ))}
+          <div className="space-y-1.5">
+            <div className="flex gap-2 overflow-x-auto scrollbar-hide -mx-1 px-1">
+              {settings.trips.map(t => (
+                <button key={t.id} onClick={() => switchTrip(t.id)}
+                  className={`shrink-0 rounded-full border px-3 py-1 text-xs font-medium transition ${
+                    t.id === trip.id
+                      ? 'border-red-500 bg-red-50 text-red-700'
+                      : 'border-gray-200 bg-white text-gray-500'
+                  }`}>
+                  {t.name}
+                </button>
+              ))}
+            </div>
+            <p className="text-xs text-gray-400 px-1">{prettyRange(trip.startDate, tripEndDate(trip))}</p>
           </div>
         ) : (
-          <p className="text-xs font-medium text-gray-400">{trip.name}</p>
+          <p className="text-xs font-medium text-gray-500">
+            {trip.name} · {prettyRange(trip.startDate, tripEndDate(trip))}
+          </p>
         )}
 
         {/* Today */}
@@ -119,17 +124,19 @@ export default function Dashboard() {
             </div>
           </div>
           <div className="mt-3">
-            <div className="mb-1 flex justify-between text-xs text-gray-500">
-              <span>{pct.toFixed(0)}% 已使用</span>
-              <span>
-                {overBudget ? `超支 ${formatJPY(Math.abs(remaining))}` : `剩餘 ${formatJPY(remaining)}`}
-              </span>
-            </div>
-            <div className="h-2.5 w-full overflow-hidden rounded-full bg-gray-100">
+            <div className="h-2 w-full overflow-hidden rounded-full bg-gray-100 mb-3">
               <div
-                className="h-full rounded-full bg-gray-800 transition-all"
+                className={`h-full rounded-full transition-all ${overBudget ? 'bg-red-500' : 'bg-gray-800'}`}
                 style={{ width: `${pct}%` }}
               />
+            </div>
+            <div className={`flex items-center justify-between rounded-xl px-4 py-2.5 ${overBudget ? 'bg-red-50' : 'bg-gray-50'}`}>
+              <span className={`text-xs ${overBudget ? 'text-red-400' : 'text-gray-400'}`}>
+                {overBudget ? '超支' : '剩餘預算'} · {pct.toFixed(0)}% 已用
+              </span>
+              <span className={`text-sm font-bold ${overBudget ? 'text-red-600' : 'text-gray-900'}`}>
+                {overBudget ? '+' : ''}{formatJPY(Math.abs(remaining))}
+              </span>
             </div>
           </div>
         </div>
