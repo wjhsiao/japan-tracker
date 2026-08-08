@@ -1,8 +1,16 @@
 import { NextRequest } from 'next/server'
 
 const RAKUTEN_APP_ID = process.env.RAKUTEN_APP_ID ?? ''
+const ACCESS_CODE = process.env.ACCESS_CODE ?? ''
+
+function unauthorized(req: NextRequest): boolean {
+  return !ACCESS_CODE || req.headers.get('x-access-code') !== ACCESS_CODE
+}
 
 export async function GET(req: NextRequest) {
+  if (unauthorized(req)) {
+    return Response.json({ error: 'Unauthorized' }, { status: 401 })
+  }
   const barcode = req.nextUrl.searchParams.get('barcode')
   if (!barcode) return Response.json({ error: 'barcode required' }, { status: 400 })
 
