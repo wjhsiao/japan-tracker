@@ -2,15 +2,14 @@
 // Deploy as: Web App → Execute as: Me → Who has access: Anyone
 // Copy the deployed URL into NEXT_PUBLIC_APPS_SCRIPT_URL in your .env.local
 //
-// SECURITY: Set TOKEN below to the same value as GAS_SECRET_TOKEN in .env.local.
-// All write operations (add / update / delete) require a matching token.
-// GET (read) is left open so the Next.js server can fetch data without token.
+// SECURITY: TOKEN is stored in GAS Script Properties (not hardcoded).
+// Set GAS_SECRET_TOKEN in: GAS 後台 → 專案設定 → 指令碼屬性
+// Must match GAS_SECRET_TOKEN in Vercel environment variables.
 
 const SHEET_NAME = 'Expenses'
 
-// ⚠️ Change this to any random secret string.
-// Must match GAS_SECRET_TOKEN in your .env.local exactly.
-const TOKEN = '2b92988927fb5f98fb97dd1f97f8cce7'
+// Read token from Script Properties — never hardcode secrets in source code.
+const TOKEN = PropertiesService.getScriptProperties().getProperty('GAS_SECRET_TOKEN') || ''
 
 const LEGACY_COLUMNS = [
   'id', 'date', 'storeName', 'storeNameJa', 'items',
