@@ -1,6 +1,6 @@
 // Google Apps Script — Japan Travel Tracker Database
 // Deploy as: Web App → Execute as: Me → Who has access: Anyone
-// Copy the deployed URL into NEXT_PUBLIC_APPS_SCRIPT_URL in your .env.local
+// Copy the deployed URL into APPS_SCRIPT_URL in your .env.local (server-side only — no NEXT_PUBLIC_ prefix)
 //
 // SECURITY: TOKEN is stored in GAS Script Properties (not hardcoded).
 // Set GAS_SECRET_TOKEN in: GAS 後台 → 專案設定 → 指令碼屬性

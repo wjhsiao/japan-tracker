@@ -75,11 +75,18 @@ export default function HistoryPage() {
   }
 
   const tripExpenses = expensesInTrip(expenses, trip)
-  const filtered = tripExpenses
-    .filter(e => filterCat === 'all' || e.category === filterCat)
-    .filter(e => filterPerson === 'all' || e.paidBy === filterPerson)
-    .filter(e => filterPayment === 'all' || e.paymentMethod === filterPayment)
-    .filter(e => !searchText || e.storeName.toLowerCase().includes(searchText.toLowerCase()))
+  const filtered = tripExpenses.filter(e => {
+    if (filterCat !== 'all' && e.category !== filterCat) return false
+    if (filterPerson !== 'all' && e.paidBy !== filterPerson) return false
+    if (filterPayment !== 'all' && e.paymentMethod !== filterPayment) return false
+    if (searchText) {
+      const q = searchText.toLowerCase()
+      if (!e.storeName.toLowerCase().includes(q)
+       && !(e.storeNameJa?.toLowerCase().includes(q) ?? false)
+       && !(e.notes?.toLowerCase().includes(q) ?? false)) return false
+    }
+    return true
+  })
 
   const grouped = groupByDate(filtered)
   const categories = Array.from(new Set(tripExpenses.map(e => e.category)))

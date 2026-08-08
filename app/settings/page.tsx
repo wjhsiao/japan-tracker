@@ -32,7 +32,10 @@ export default function SettingsPage() {
     reader.onload = e => {
       try {
         const data = JSON.parse(e.target?.result as string)
-        if (!data.trips || !data.people) throw new Error('格式錯誤')
+        if (!Array.isArray(data.trips) || !Array.isArray(data.people) || !data.trips[0]?.id)
+          throw new Error('格式錯誤')
+        if (typeof data.exchangeRateJPYtoTWD !== 'number' || data.exchangeRateJPYtoTWD <= 0)
+          data.exchangeRateJPYtoTWD = DEFAULT_SETTINGS.exchangeRateJPYtoTWD
         saveSettings({ ...DEFAULT_SETTINGS, ...data })
         if (confirm('還原成功，重新整理頁面套用設定？')) window.location.reload()
       } catch {
@@ -273,8 +276,8 @@ export default function SettingsPage() {
         <section className="rounded-2xl bg-white p-5 shadow-sm ring-1 ring-gray-100 space-y-3">
           <h2 className="text-sm font-semibold text-gray-700">🔒 存取密碼</h2>
           <div>
-            <input type="text" value={s.accessCode} onChange={e => update('accessCode', e.target.value)}
-              placeholder="輸入與伺服器相同的密碼" className="input" autoComplete="off" />
+            <input type="password" value={s.accessCode} onChange={e => update('accessCode', e.target.value)}
+              placeholder="輸入與伺服器相同的密碼" className="input" autoComplete="current-password" />
             <p className="mt-2 text-xs text-gray-400 leading-relaxed">
               此密碼用於保護收據掃描與資料讀取。請輸入與部署環境變數 <code className="text-gray-500">ACCESS_CODE</code> 相同的字串。兩位使用者需各自在自己的手機輸入同一組密碼。
             </p>

@@ -16,6 +16,9 @@ export async function POST(req: NextRequest) {
   }
   const { imageBase64, mimeType } = body
   if (!imageBase64) return Response.json({ error: 'imageBase64 required' }, { status: 400 })
+  // Mirror the same size gate as /api/ocr to prevent oversized payloads reaching OCR.space.
+  const MAX_IMAGE_BASE64 = 1_000_000
+  if (imageBase64.length > MAX_IMAGE_BASE64) return Response.json({ text: '' })
 
   const params = new URLSearchParams({
     apikey: API_KEY,

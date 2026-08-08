@@ -34,7 +34,11 @@ export default function ScanPage() {
   }
 
   async function handleFile(file: File) {
-    setPreview(URL.createObjectURL(file))
+    // Revoke any previous object URL before creating a new one to avoid memory leaks.
+    setPreview(prev => {
+      if (prev.startsWith('blob:')) URL.revokeObjectURL(prev)
+      return URL.createObjectURL(file)
+    })
     setOcrResult(null)
     setPendingPhoto(null)
     setIsAnalyzing(true)
