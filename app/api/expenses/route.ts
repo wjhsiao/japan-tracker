@@ -30,8 +30,6 @@ export async function GET(req: NextRequest) {
     const url = `${GAS_URL}?token=${encodeURIComponent(GAS_TOKEN)}`
     const res = await fetchWithTimeout(url, { cache: 'no-store', redirect: 'follow' })
     const data = await res.json()
-    // DEBUG: log GAS response (remove after confirming token works)
-    console.log('[expenses] GAS status:', res.status, 'body:', JSON.stringify(data).slice(0, 200))
     return Response.json(Array.isArray(data) ? data : [])
   } catch (err) {
     return Response.json({ error: String(err) }, { status: 502 })
